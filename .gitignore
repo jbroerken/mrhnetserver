@@ -36,9 +36,3 @@
 ./xcode
 ./xcode/*
 xcode/mrhnetserver/
-xcode/mrhnetserver/mrhnetserver.entitlements
-xcode/mrhnetserver/mrhnetserver.xcodeproj/project.pbxproj
-xcode/mrhnetserver/mrhnetserver.xcodeproj/project.xcworkspace/contents.xcworkspacedata
-xcode/mrhnetserver/mrhnetserver.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-xcode/mrhnetserver/mrhnetserver.xcodeproj/project.xcworkspace/xcuserdata/Jens.xcuserdatad/UserInterfaceState.xcuserstate
-xcode/mrhnetserver/mrhnetserver.xcodeproj/xcuserdata/Jens.xcuserdatad/xcschemes/xcschememanagement.plist
