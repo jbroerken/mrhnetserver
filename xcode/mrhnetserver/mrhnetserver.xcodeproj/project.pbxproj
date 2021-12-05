@@ -1,0 +1,489 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 55;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B41A217327557355000B4B93 /* ServerAuth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B41A217127557355000B4B93 /* ServerAuth.cpp */; };
+		B41A2177275583FB000B4B93 /* ConnectionMain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B41A2175275583FB000B4B93 /* ConnectionMain.cpp */; };
+		B41A217A27558517000B4B93 /* Configuration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B41A217827558517000B4B93 /* Configuration.cpp */; };
+		B41A218C2755A697000B4B93 /* WorkerPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B41A218A2755A697000B4B93 /* WorkerPool.cpp */; };
+		B41A218F2755AC34000B4B93 /* ConnectionTask.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B41A218D2755AC34000B4B93 /* ConnectionTask.cpp */; };
+		B41CA5102756902C0010E3BD /* Database.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B41CA50E2756902C0010E3BD /* Database.cpp */; };
+		B41CA5132756A8590010E3BD /* Timer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B41CA5112756A8590010E3BD /* Timer.cpp */; };
+		B42EA114275D341600968202 /* CLI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B42D3ECC275BF40100A7188D /* CLI.cpp */; };
+		B4AA82912755656400185C63 /* Logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4AA828E2755656400185C63 /* Logger.cpp */; };
+		B4AA82922755656400185C63 /* Main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4AA82902755656400185C63 /* Main.cpp */; };
+		B4AA82962755681900185C63 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AA82952755681900185C63 /* CoreFoundation.framework */; };
+		B4AA82982755682A00185C63 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AA82972755682A00185C63 /* Security.framework */; };
+		B4AA829A2755683400185C63 /* libsodium.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AA82992755683400185C63 /* libsodium.a */; };
+		B4AA829C275568BF00185C63 /* libmysqlcppconn8.2.8.0.27.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AA829B275568BF00185C63 /* libmysqlcppconn8.2.8.0.27.dylib */; };
+		B4AA829E275568DE00185C63 /* libmysqlcppconn8.2.8.0.27.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = B4AA829D275568DE00185C63 /* libmysqlcppconn8.2.8.0.27.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B4AA82A0275568ED00185C63 /* libmsquic.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AA829F275568ED00185C63 /* libmsquic.a */; };
+		B4AA82AE2755695E00185C63 /* NetServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4AA82A22755695E00185C63 /* NetServer.cpp */; };
+		B4AA82AF2755695E00185C63 /* NetMessage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4AA82A42755695E00185C63 /* NetMessage.cpp */; };
+		B4AA82B02755695E00185C63 /* NetMessageV1.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4AA82A82755695E00185C63 /* NetMessageV1.cpp */; };
+		B4AA82B12755695E00185C63 /* NetConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4AA82A92755695E00185C63 /* NetConnection.cpp */; };
+		B4AA82B22755695E00185C63 /* MsQuic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4AA82AC2755695E00185C63 /* MsQuic.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B4AA82802755655100185C63 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				B4AA829E275568DE00185C63 /* libmysqlcppconn8.2.8.0.27.dylib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		B41A216D275571D6000B4B93 /* DatabaseTable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DatabaseTable.h; sourceTree = "<group>"; };
+		B41A217127557355000B4B93 /* ServerAuth.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ServerAuth.cpp; sourceTree = "<group>"; };
+		B41A217227557355000B4B93 /* ServerAuth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServerAuth.h; sourceTree = "<group>"; };
+		B41A21742755836A000B4B93 /* ServerException.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServerException.h; sourceTree = "<group>"; };
+		B41A2175275583FB000B4B93 /* ConnectionMain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionMain.cpp; sourceTree = "<group>"; };
+		B41A2176275583FB000B4B93 /* ConnectionMain.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ConnectionMain.h; sourceTree = "<group>"; };
+		B41A217827558517000B4B93 /* Configuration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Configuration.cpp; sourceTree = "<group>"; };
+		B41A217927558517000B4B93 /* Configuration.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Configuration.h; sourceTree = "<group>"; };
+		B41A217B2755925F000B4B93 /* ActorType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ActorType.h; sourceTree = "<group>"; };
+		B41A21882755A580000B4B93 /* WorkerTask.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WorkerTask.h; sourceTree = "<group>"; };
+		B41A218A2755A697000B4B93 /* WorkerPool.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WorkerPool.cpp; sourceTree = "<group>"; };
+		B41A218B2755A697000B4B93 /* WorkerPool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WorkerPool.h; sourceTree = "<group>"; };
+		B41A218D2755AC34000B4B93 /* ConnectionTask.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionTask.cpp; sourceTree = "<group>"; };
+		B41A218E2755AC34000B4B93 /* ConnectionTask.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ConnectionTask.h; sourceTree = "<group>"; };
+		B41CA50D27568F370010E3BD /* WorkerShared.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WorkerShared.h; sourceTree = "<group>"; };
+		B41CA50E2756902C0010E3BD /* Database.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Database.cpp; sourceTree = "<group>"; };
+		B41CA50F2756902C0010E3BD /* Database.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Database.h; sourceTree = "<group>"; };
+		B41CA5112756A8590010E3BD /* Timer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Timer.cpp; sourceTree = "<group>"; };
+		B41CA5122756A8590010E3BD /* Timer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Timer.h; sourceTree = "<group>"; };
+		B42D3ECC275BF40100A7188D /* CLI.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CLI.cpp; sourceTree = "<group>"; };
+		B42D3ECD275BF40100A7188D /* CLI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CLI.h; sourceTree = "<group>"; };
+		B4AA82822755655100185C63 /* mrhnetserver */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = mrhnetserver; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4AA828D2755656400185C63 /* Revision.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Revision.h; sourceTree = "<group>"; };
+		B4AA828E2755656400185C63 /* Logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Logger.cpp; sourceTree = "<group>"; };
+		B4AA828F2755656400185C63 /* Logger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Logger.h; sourceTree = "<group>"; };
+		B4AA82902755656400185C63 /* Main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Main.cpp; sourceTree = "<group>"; };
+		B4AA82932755680800185C63 /* mrhnetserver.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = mrhnetserver.entitlements; sourceTree = "<group>"; };
+		B4AA82952755681900185C63 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		B4AA82972755682A00185C63 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		B4AA82992755683400185C63 /* libsodium.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsodium.a; path = ../../../../../../../../../usr/local/lib/libsodium.a; sourceTree = "<group>"; };
+		B4AA829B275568BF00185C63 /* libmysqlcppconn8.2.8.0.27.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmysqlcppconn8.2.8.0.27.dylib; path = "../../../../../../../../../usr/local/mysql-8.0.27-macos11-arm64/connector-c++-8.0.27/lib64/debug/libmysqlcppconn8.2.8.0.27.dylib"; sourceTree = "<group>"; };
+		B4AA829D275568DE00185C63 /* libmysqlcppconn8.2.8.0.27.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmysqlcppconn8.2.8.0.27.dylib; sourceTree = "<group>"; };
+		B4AA829F275568ED00185C63 /* libmsquic.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmsquic.a; path = ../../../../../../../../../usr/local/msquic/lib/libmsquic.a; sourceTree = "<group>"; };
+		B4AA82A22755695E00185C63 /* NetServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetServer.cpp; sourceTree = "<group>"; };
+		B4AA82A32755695E00185C63 /* MsQuic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MsQuic.h; sourceTree = "<group>"; };
+		B4AA82A42755695E00185C63 /* NetMessage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetMessage.cpp; sourceTree = "<group>"; };
+		B4AA82A52755695E00185C63 /* NetServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetServer.h; sourceTree = "<group>"; };
+		B4AA82A72755695E00185C63 /* NetMessageV1.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetMessageV1.h; sourceTree = "<group>"; };
+		B4AA82A82755695E00185C63 /* NetMessageV1.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetMessageV1.cpp; sourceTree = "<group>"; };
+		B4AA82A92755695E00185C63 /* NetConnection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetConnection.cpp; sourceTree = "<group>"; };
+		B4AA82AA2755695E00185C63 /* NetConnection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetConnection.h; sourceTree = "<group>"; };
+		B4AA82AB2755695E00185C63 /* NetMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetMessage.h; sourceTree = "<group>"; };
+		B4AA82AC2755695E00185C63 /* MsQuic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MsQuic.cpp; sourceTree = "<group>"; };
+		B4AA82AD2755695E00185C63 /* NetException.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetException.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B4AA827F2755655100185C63 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B4AA82A0275568ED00185C63 /* libmsquic.a in Frameworks */,
+				B4AA829C275568BF00185C63 /* libmysqlcppconn8.2.8.0.27.dylib in Frameworks */,
+				B4AA829A2755683400185C63 /* libsodium.a in Frameworks */,
+				B4AA82982755682A00185C63 /* Security.framework in Frameworks */,
+				B4AA82962755681900185C63 /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B41A216C275571C9000B4B93 /* Database */ = {
+			isa = PBXGroup;
+			children = (
+				B41CA50E2756902C0010E3BD /* Database.cpp */,
+				B41CA50F2756902C0010E3BD /* Database.h */,
+				B41A216D275571D6000B4B93 /* DatabaseTable.h */,
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		B41A216F2755733F000B4B93 /* Connection */ = {
+			isa = PBXGroup;
+			children = (
+				B41A218D2755AC34000B4B93 /* ConnectionTask.cpp */,
+				B41A218E2755AC34000B4B93 /* ConnectionTask.h */,
+				B41A2175275583FB000B4B93 /* ConnectionMain.cpp */,
+				B41A2176275583FB000B4B93 /* ConnectionMain.h */,
+			);
+			path = Connection;
+			sourceTree = "<group>";
+		};
+		B41A217027557345000B4B93 /* Communication */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Communication;
+			sourceTree = "<group>";
+		};
+		B41A21862755A56E000B4B93 /* WorkerPool */ = {
+			isa = PBXGroup;
+			children = (
+				B41A218A2755A697000B4B93 /* WorkerPool.cpp */,
+				B41A218B2755A697000B4B93 /* WorkerPool.h */,
+				B41CA50D27568F370010E3BD /* WorkerShared.h */,
+				B41A21882755A580000B4B93 /* WorkerTask.h */,
+			);
+			path = WorkerPool;
+			sourceTree = "<group>";
+		};
+		B4AA82792755655100185C63 = {
+			isa = PBXGroup;
+			children = (
+				B4AA829D275568DE00185C63 /* libmysqlcppconn8.2.8.0.27.dylib */,
+				B4AA82932755680800185C63 /* mrhnetserver.entitlements */,
+				B4AA828C2755656400185C63 /* src */,
+				B4AA82832755655100185C63 /* Products */,
+				B4AA82942755681900185C63 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		B4AA82832755655100185C63 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B4AA82822755655100185C63 /* mrhnetserver */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B4AA828C2755656400185C63 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				B4AA82A12755691F00185C63 /* NetMessage */,
+				B41A216C275571C9000B4B93 /* Database */,
+				B41A21862755A56E000B4B93 /* WorkerPool */,
+				B41A217027557345000B4B93 /* Communication */,
+				B41A216F2755733F000B4B93 /* Connection */,
+				B41A217127557355000B4B93 /* ServerAuth.cpp */,
+				B41A217227557355000B4B93 /* ServerAuth.h */,
+				B41A21742755836A000B4B93 /* ServerException.h */,
+				B41A217B2755925F000B4B93 /* ActorType.h */,
+				B42D3ECC275BF40100A7188D /* CLI.cpp */,
+				B42D3ECD275BF40100A7188D /* CLI.h */,
+				B41A217827558517000B4B93 /* Configuration.cpp */,
+				B41A217927558517000B4B93 /* Configuration.h */,
+				B41CA5112756A8590010E3BD /* Timer.cpp */,
+				B41CA5122756A8590010E3BD /* Timer.h */,
+				B4AA828E2755656400185C63 /* Logger.cpp */,
+				B4AA828F2755656400185C63 /* Logger.h */,
+				B4AA82902755656400185C63 /* Main.cpp */,
+				B4AA828D2755656400185C63 /* Revision.h */,
+			);
+			name = src;
+			path = ../../src;
+			sourceTree = "<group>";
+		};
+		B4AA82942755681900185C63 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B4AA829F275568ED00185C63 /* libmsquic.a */,
+				B4AA829B275568BF00185C63 /* libmysqlcppconn8.2.8.0.27.dylib */,
+				B4AA82992755683400185C63 /* libsodium.a */,
+				B4AA82972755682A00185C63 /* Security.framework */,
+				B4AA82952755681900185C63 /* CoreFoundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		B4AA82A12755691F00185C63 /* NetMessage */ = {
+			isa = PBXGroup;
+			children = (
+				B4AA82A62755695E00185C63 /* Ver */,
+				B4AA82AC2755695E00185C63 /* MsQuic.cpp */,
+				B4AA82A32755695E00185C63 /* MsQuic.h */,
+				B4AA82A22755695E00185C63 /* NetServer.cpp */,
+				B4AA82A52755695E00185C63 /* NetServer.h */,
+				B4AA82A92755695E00185C63 /* NetConnection.cpp */,
+				B4AA82AA2755695E00185C63 /* NetConnection.h */,
+				B4AA82A42755695E00185C63 /* NetMessage.cpp */,
+				B4AA82AB2755695E00185C63 /* NetMessage.h */,
+				B4AA82AD2755695E00185C63 /* NetException.h */,
+			);
+			path = NetMessage;
+			sourceTree = "<group>";
+		};
+		B4AA82A62755695E00185C63 /* Ver */ = {
+			isa = PBXGroup;
+			children = (
+				B4AA82A82755695E00185C63 /* NetMessageV1.cpp */,
+				B4AA82A72755695E00185C63 /* NetMessageV1.h */,
+			);
+			path = Ver;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B4AA82812755655100185C63 /* mrhnetserver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B4AA82892755655100185C63 /* Build configuration list for PBXNativeTarget "mrhnetserver" */;
+			buildPhases = (
+				B4AA82802755655100185C63 /* CopyFiles */,
+				B4AA827E2755655100185C63 /* Sources */,
+				B4AA827F2755655100185C63 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = mrhnetserver;
+			productName = mrhnetserver;
+			productReference = B4AA82822755655100185C63 /* mrhnetserver */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B4AA827A2755655100185C63 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1310;
+				TargetAttributes = {
+					B4AA82812755655100185C63 = {
+						CreatedOnToolsVersion = 13.1;
+					};
+				};
+			};
+			buildConfigurationList = B4AA827D2755655100185C63 /* Build configuration list for PBXProject "mrhnetserver" */;
+			compatibilityVersion = "Xcode 13.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B4AA82792755655100185C63;
+			productRefGroup = B4AA82832755655100185C63 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B4AA82812755655100185C63 /* mrhnetserver */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B4AA827E2755655100185C63 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B42EA114275D341600968202 /* CLI.cpp in Sources */,
+				B41A217A27558517000B4B93 /* Configuration.cpp in Sources */,
+				B41A217327557355000B4B93 /* ServerAuth.cpp in Sources */,
+				B41CA5102756902C0010E3BD /* Database.cpp in Sources */,
+				B4AA82AE2755695E00185C63 /* NetServer.cpp in Sources */,
+				B41A2177275583FB000B4B93 /* ConnectionMain.cpp in Sources */,
+				B41CA5132756A8590010E3BD /* Timer.cpp in Sources */,
+				B4AA82B02755695E00185C63 /* NetMessageV1.cpp in Sources */,
+				B4AA82AF2755695E00185C63 /* NetMessage.cpp in Sources */,
+				B4AA82B22755695E00185C63 /* MsQuic.cpp in Sources */,
+				B4AA82B12755695E00185C63 /* NetConnection.cpp in Sources */,
+				B41A218C2755A697000B4B93 /* WorkerPool.cpp in Sources */,
+				B4AA82922755656400185C63 /* Main.cpp in Sources */,
+				B4AA82912755656400185C63 /* Logger.cpp in Sources */,
+				B41A218F2755AC34000B4B93 /* ConnectionTask.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B4AA82872755655100185C63 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.6;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		B4AA82882755655100185C63 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.6;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		B4AA828A2755655100185C63 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = mrhnetserver.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = A3JQ26ZNBA;
+				ENABLE_HARDENED_RUNTIME = YES;
+				HEADER_SEARCH_PATHS = (
+					"/usr/local/mysql-8.0.27-macos11-arm64/connector-c++-8.0.27/include",
+					/usr/local/include,
+					/usr/local/msquic/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"/usr/local/mysql-8.0.27-macos11-arm64/connector-c++-8.0.27/lib64/debug",
+					/usr/local/msquic/lib,
+					/usr/local/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		B4AA828B2755655100185C63 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = mrhnetserver.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = A3JQ26ZNBA;
+				ENABLE_HARDENED_RUNTIME = YES;
+				HEADER_SEARCH_PATHS = (
+					"/usr/local/mysql-8.0.27-macos11-arm64/connector-c++-8.0.27/include",
+					/usr/local/include,
+					/usr/local/msquic/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"/usr/local/mysql-8.0.27-macos11-arm64/connector-c++-8.0.27/lib64/debug",
+					/usr/local/msquic/lib,
+					/usr/local/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B4AA827D2755655100185C63 /* Build configuration list for PBXProject "mrhnetserver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B4AA82872755655100185C63 /* Debug */,
+				B4AA82882755655100185C63 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B4AA82892755655100185C63 /* Build configuration list for PBXNativeTarget "mrhnetserver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B4AA828A2755655100185C63 /* Debug */,
+				B4AA828B2755655100185C63 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B4AA827A2755655100185C63 /* Project object */;
+}
