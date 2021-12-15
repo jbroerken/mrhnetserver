@@ -90,9 +90,11 @@ CREATE TABLE `channel_device_connections`
 (
     `connection_list_id` int unsigned NOT NULL COMMENT 'Channel connection list identifier',
     `channel_id` int unsigned NOT NULL COMMENT 'Channel list identifier',
+    `user_id` int unsigned NOT NULL COMMENT 'User Account identifier',
     `device_key` varchar(255) NOT NULL DEFAULT '' COMMENT 'Connection device key',
     `connection_state` int unsigned NOT NULL DEFAULT '0' COMMENT 'Connection state (none, platform, app + platform)',
     FOREIGN KEY (`connection_list_id`) REFERENCES active_channels(`connection_list_id`),
-    FOREIGN KEY (`channel_id`) REFERENCES channel_list(`channel_id`)
+    FOREIGN KEY (`channel_id`) REFERENCES channel_list(`channel_id`),
+    FOREIGN KEY (`user_id`) REFERENCES user_account(`user_id`)
 ) 
 DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Active connections for a active channel';

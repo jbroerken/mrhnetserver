@@ -110,7 +110,6 @@ private:
     MsQuicListenerContext* p_Context;
     
     bool b_Started;
-    std::list<std::unique_ptr<NetConnection>> l_Connection;
     
 protected:
 

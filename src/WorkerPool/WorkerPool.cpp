@@ -106,6 +106,9 @@ void WorkerPool::Update(WorkerPool* p_Instance, WorkerShared* p_Shared, int i_Pu
         {
             std::unique_lock<std::mutex> c_Lock(p_Instance->c_Mutex);
             p_Instance->c_Condition.wait(c_Lock);
+            
+            // Return to start, was notify due to quit?
+            continue;
         }
         
         // Set timer for pulse diff
