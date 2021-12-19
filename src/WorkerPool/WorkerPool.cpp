@@ -187,7 +187,7 @@ void WorkerPool::AddTask(std::unique_ptr<WorkerTask>& p_Task)
     // No free entry, add a new one
     try
     {
-        c_Mutex.lock();
+        c_Mutex.lock(); // Lock for outside multithreading
         
         dq_Task.emplace_back(p_Task);
         us_TaskCount += 1;
