@@ -42,11 +42,18 @@ QUIC_STATUS QUIC_API MsQuicListenerCallback(_In_ HQUIC Listener, _In_opt_ void* 
     {
         case QUIC_LISTENER_EVENT_NEW_CONNECTION:
         {
+            if (p_Listener->i_MaxClientCount <= p_Listener->i_CurClientCount)
+            {
+                ui_Status = QUIC_STATUS_CONNECTION_REFUSED;
+                break;
+            }
+            
             try
             {
                 // First, create the connection context to use.
                 MsQuicConnectionContext* p_Connection = new MsQuicConnectionContext(p_Listener->p_APITable,
-                                                                                    Event->NEW_CONNECTION.Connection);
+                                                                                    Event->NEW_CONNECTION.Connection,
+                                                                                    p_Listener->i_CurClientCount);
                 
                 // Next, perform API setup
                 p_Listener->p_APITable->SetCallbackHandler(Event->NEW_CONNECTION.Connection,
@@ -59,6 +66,12 @@ QUIC_STATUS QUIC_API MsQuicListenerCallback(_In_ HQUIC Listener, _In_opt_ void* 
                 // @NOTE: Lock here, list order might be modified
                 std::lock_guard<std::mutex> c_Guard(p_Listener->c_Mutex);
                 p_Listener->l_Connection.emplace_back(p_Connection);
+                
+                // Add connection as active
+                p_Listener->i_CurClientCount += 1;
+                
+                int i_NewClientCount = p_Listener->i_CurClientCount;
+                printf("\n(MsQuicListenerCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
             }
             catch (...)
             {
@@ -67,6 +80,7 @@ QUIC_STATUS QUIC_API MsQuicListenerCallback(_In_ HQUIC Listener, _In_opt_ void* 
                 //        return a error code instead.
                 ui_Status = QUIC_STATUS_CONNECTION_REFUSED;
             }
+            
             break;
         }
         
@@ -106,6 +120,12 @@ QUIC_STATUS QUIC_API MsQuicConnectionCallback(_In_ HQUIC Connection, _In_opt_ vo
             
         case QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE:
         {
+            // Remove connection as active
+            p_Context->i_CurClientCount -= 1;
+            
+            int i_NewClientCount = p_Context->i_CurClientCount;
+            printf("\n(MsQuicConnectionCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
+            
             // Close if not already closed
             if (p_Context->p_Connection != NULL)
             {
@@ -116,13 +136,13 @@ QUIC_STATUS QUIC_API MsQuicConnectionCallback(_In_ HQUIC Connection, _In_opt_ vo
             // No longer owned by anyone?
             if (p_Context->b_Shared == false)
             {
-                printf("\n(MRH_ServerConnectionCallback) Delete Context [ %p ]\n", Connection);
+                printf("\n(MsQuicConnectionCallback) Delete Context [ %p ]\n", Connection);
                 
                 delete p_Context;
             }
             else
             {
-                printf("\n(MRH_ServerConnectionCallback) Shutdown Connection [ %p ]\n", Connection);
+                printf("\n(MsQuicConnectionCallback) Shutdown Connection [ %p ]\n", Connection);
                 
                 p_Context->b_Shared = false; // Signal deletion OK
             }

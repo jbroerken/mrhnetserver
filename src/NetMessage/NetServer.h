@@ -75,9 +75,10 @@ public:
      *  \param s_CertFilePath The full path to the server certificate file.
      *  \param s_KeyFilePath The full path to the server key file.
      *  \param i_TimeoutS The connection timeout in seconds.
+     *  \param i_MaxClientCount The maximum number of clients which can connect.
      */
     
-    void Start(int i_Port, std::string const& s_CertFilePath, std::string const& s_KeyFilePath, int i_TimeoutS);
+    void Start(int i_Port, std::string const& s_CertFilePath, std::string const& s_KeyFilePath, int i_TimeoutS, int i_MaxClientCount);
     
     /**
      *  Stop accepting connections.

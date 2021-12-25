@@ -50,7 +50,8 @@ void ConnectionMain::Run(Configuration& c_Config, bool& b_Run)
         c_NetServer.Start(c_Config.i_Port,
                           c_Config.s_CertFilePath,
                           c_Config.s_KeyFilePath,
-                          c_Config.i_ConnectionTimeoutS);
+                          c_Config.i_ConnectionTimeoutS,
+                          c_Config.i_MaxClientCount);
         
         // Now we need the worker context and threads
         std::list<std::unique_ptr<WorkerShared>> l_ThreadInfo;

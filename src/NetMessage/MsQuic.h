@@ -96,9 +96,11 @@ public:
      */
     
     MsQuicConnectionContext(const QUIC_API_TABLE* p_APITable,
-                            HQUIC p_Connection) noexcept : b_Shared(true),
-                                                           p_APITable(p_APITable),
-                                                           p_Connection(p_Connection)
+                            HQUIC p_Connection,
+                            std::atomic<int>& i_CurClientCount) noexcept : b_Shared(true),
+                                                                           p_APITable(p_APITable),
+                                                                           p_Connection(p_Connection),
+                                                                           i_CurClientCount(i_CurClientCount)
     {}
     
     //*************************************************************************************
@@ -112,6 +114,8 @@ public:
     
     std::list<MsQuicMessageContext> l_Recieved;
     std::list<MsQuicMessageContext> l_Send;
+    
+    std::atomic<int>& i_CurClientCount;
 };
 
 struct MsQuicListenerContext
@@ -126,11 +130,16 @@ public:
      *  Default constructor.
      *
      *  \param p_APITable The library api table.
+     *  \param p_Configuration The library configuration.
+     *  \param i_MaxClientCount The max number of clients which can connect.
      */
     
     MsQuicListenerContext(const QUIC_API_TABLE* p_APITable,
-                          HQUIC p_Configuration) noexcept : p_APITable(p_APITable),
-                                                            p_Configuration(p_Configuration)
+                          HQUIC p_Configuration,
+                          int i_MaxClientCount) noexcept : p_APITable(p_APITable),
+                                                           p_Configuration(p_Configuration),
+                                                           i_MaxClientCount(i_MaxClientCount),
+                                                           i_CurClientCount(0)
     {}
     
     //*************************************************************************************
@@ -143,6 +152,9 @@ public:
     HQUIC p_Configuration;
     
     std::list<MsQuicConnectionContext*> l_Connection;
+    
+    int i_MaxClientCount;
+    std::atomic<int> i_CurClientCount;
 };
 
 //*************************************************************************************

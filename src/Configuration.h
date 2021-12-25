@@ -66,6 +66,8 @@ public:
     std::string s_CertFilePath;
     std::string s_KeyFilePath;
     
+    int i_MaxClientCount;
+    
     int i_ConnectionTimeoutS;
     int i_ConnectionPulseMS;
     int i_MessagePulseMS;

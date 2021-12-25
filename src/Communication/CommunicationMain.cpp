@@ -50,7 +50,8 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
         c_NetServer.Start(c_Config.i_Port,
                           c_Config.s_CertFilePath,
                           c_Config.s_KeyFilePath,
-                          c_Config.i_ConnectionTimeoutS);
+                          c_Config.i_ConnectionTimeoutS,
+                          c_Config.i_MaxClientCount);
         
         // Create used message exchange
         ExchangeContainer c_ExchangeContainer(SERVER_COMMUNICATION);

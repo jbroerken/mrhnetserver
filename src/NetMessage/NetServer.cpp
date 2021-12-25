@@ -34,6 +34,9 @@
 #ifndef MRH_SRV_ALPN_NAME
     #define MRH_SRV_ALPN_NAME "mrh_srv_alpn"
 #endif
+#ifndef CLIENT_STREAMS_PER_DIRECTION
+    #define CLIENT_STREAMS_PER_DIRECTION 32 // Client limit, use it to define max stream count
+#endif
 
 
 //*************************************************************************************
@@ -90,7 +93,7 @@ NetServer::~NetServer() noexcept
 // Run
 //*************************************************************************************
 
-void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string const& s_KeyFilePath, int i_TimeoutS)
+void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string const& s_KeyFilePath, int i_TimeoutS, int i_MaxClientCount)
 {
     if (b_Started == true)
     {
@@ -99,6 +102,10 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     else if (p_APITable == NULL)
     {
         throw NetException("No API table to use!");
+    }
+    else if (i_MaxClientCount < 1)
+    {
+        throw NetException("Server has invalid client connection count!");
     }
     
     //
@@ -148,7 +155,7 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     c_Settings.IsSet.IdleTimeoutMs = TRUE;
     c_Settings.ServerResumptionLevel = QUIC_SERVER_NO_RESUME;//QUIC_SERVER_RESUME_AND_ZERORTT;
     c_Settings.IsSet.ServerResumptionLevel = TRUE;
-    c_Settings.PeerUnidiStreamCount = 1024;
+    c_Settings.PeerUnidiStreamCount = i_MaxClientCount * CLIENT_STREAMS_PER_DIRECTION * 2; // Connections * Connection Streams * To/From
     c_Settings.IsSet.PeerUnidiStreamCount = TRUE;
     //c_Settings.PeerBidiStreamCount = 1024;
     //c_Settings.IsSet.PeerBidiStreamCount = TRUE;
@@ -184,7 +191,8 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     try
     {
         p_Context = new MsQuicListenerContext(p_MsQuic,
-                                              p_Configuration);
+                                              p_Configuration,
+                                              i_MaxClientCount);
     }
     catch (...)
     {

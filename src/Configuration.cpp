@@ -39,12 +39,13 @@ namespace
         PORT = 1,
         CERT_FILE_PATH = 2,
         KEY_FILE_PATH = 3,
-        CONNECTION_TIMEOUT_S = 4,
-        CONNECTION_PULSE_MS = 5,
-        MESSAGE_PULS_MS = 6,
+        MAX_CLIENT_COUNT = 4,
+        CONNECTION_TIMEOUT_S = 5,
+        CONNECTION_PULSE_MS = 6,
+        MESSAGE_PULS_MS = 7,
         
         // MySQL
-        MYSQL_ADDRESS = 7,
+        MYSQL_ADDRESS,
         MYSQL_PORT,
         MYSQL_USER,
         MYSQL_PASSWORD,
@@ -68,6 +69,7 @@ namespace
         "ServerPort=",
         "ServerCertFilePath=",
         "ServerKeyFilePath=",
+        "ServerMaxClientCount=",
         "ServerConnectionTimeoutS=",
         "ServerConnectionPulseMS=",
         "ServerMessagePulseMS=",
@@ -95,6 +97,7 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
                                                               i_Port(-1),
                                                               s_CertFilePath("/usr/share/mrhnetserver/cert.crt"),
                                                               s_KeyFilePath("/usr/share/mrhnetserver/key.key"),
+                                                              i_MaxClientCount(1024),
                                                               i_ConnectionTimeoutS(60),
                                                               i_ConnectionPulseMS(100),
                                                               i_MessagePulseMS(100),
@@ -158,6 +161,9 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
                         break;
                     case KEY_FILE_PATH:
                         s_KeyFilePath = s_Line;
+                        break;
+                    case MAX_CLIENT_COUNT:
+                        i_MaxClientCount = std::stoi(s_Line);
                         break;
                     case CONNECTION_TIMEOUT_S:
                         i_ConnectionTimeoutS = std::stoi(s_Line);
