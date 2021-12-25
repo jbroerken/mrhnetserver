@@ -42,15 +42,15 @@ namespace NetMessageV1
     constexpr size_t us_SizeServerChannel = 64;
     
     // Account
-    constexpr size_t us_SizeAccountMail = 256;
+    constexpr size_t us_SizeAccountMail = 128;
     constexpr size_t us_SizeAccountPassword = crypto_secretbox_KEYBYTES;
     constexpr size_t us_SizeAccountPasswordSalt = crypto_pwhash_SALTBYTES;
     
     constexpr size_t us_SizeNonceHash = crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + sizeof(uint32_t);
     
     // Device
-    constexpr size_t us_SizeDeviceKey = 64;
-    constexpr size_t us_SizeDevicePassword = 256;
+    constexpr size_t us_SizeDeviceKey = 25;
+    constexpr size_t us_SizeDevicePassword = 32;
     
     //*************************************************************************************
     // NetMessage Data

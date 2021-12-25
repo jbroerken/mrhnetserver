@@ -1,5 +1,5 @@
 /**
- *  ConnectionServer.cpp
+ *  CommunicationMain.cpp
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -24,8 +24,8 @@
 // External
 
 // Project
-#include "./ConnectionMain.h"
-#include "./ConnectionTask.h"
+#include "./CommunicationMain.h"
+//#include "./ConnectionTask.h"
 #include "../WorkerPool/WorkerPool.h"
 #include "../NetMessage/NetServer.h"
 #include "../Database/Database.h"
@@ -37,7 +37,7 @@
 // Run
 //*************************************************************************************
 
-void ConnectionMain::Run(Configuration& c_Config, bool& b_Run)
+void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
 {
     Logger& c_Logger = Logger::Singleton();
     
@@ -85,20 +85,22 @@ void ConnectionMain::Run(Configuration& c_Config, bool& b_Run)
             {
                 try
                 {
+                    /*
                     std::unique_ptr<WorkerTask> p_Task = std::make_unique<ConnectionTask>(Connection);
                     c_WorkerPool.AddTask(p_Task);
+                    */
                 }
                 catch (ServerException& e)
                 {
                     c_Logger.Log(Logger::WARNING, "Failed to add connection: " +
                                                   e.what2(),
-                                 "ConnectionMain.cpp", __LINE__);
+                                 "CommunicationMain.cpp", __LINE__);
                 }
                 catch (std::exception& e)
                 {
                     c_Logger.Log(Logger::WARNING, "Failed to add connection: " +
                                                   std::string(e.what()),
-                                 "ConnectionMain.cpp", __LINE__);
+                                 "CommunicationMain.cpp", __LINE__);
                 }
             }
             
@@ -119,18 +121,18 @@ void ConnectionMain::Run(Configuration& c_Config, bool& b_Run)
     {
         c_Logger.Log(Logger::WARNING, e.what2() +
                                       "(Connection Server)",
-                     "ConnectionMain.cpp", __LINE__);
+                     "CommunicationMain.cpp", __LINE__);
     }
     catch (ServerException& e)
     {
         c_Logger.Log(Logger::WARNING, e.what2() +
                                       "(Connection Server)",
-                     "ConnectionMain.cpp", __LINE__);
+                     "CommunicationMain.cpp", __LINE__);
     }
     catch (std::exception& e)
     {
         c_Logger.Log(Logger::WARNING, std::string(e.what()) +
                                       "(Connection Server)",
-                     "ConnectionMain.cpp", __LINE__);
+                     "CommunicationMain.cpp", __LINE__);
     }
 }

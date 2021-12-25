@@ -31,6 +31,7 @@
 
 // Project
 #include "./Connection/ConnectionMain.h"
+#include "./Communication/CommunicationMain.h"
 #include "./CLI.h"
 #include "./Logger.h"
 #include "./Revision.h"
@@ -235,16 +236,6 @@ int main(int argc, const char* argv[])
         }
     }
     
-    // Run as daemon or start cli thread
-    if (b_Daemon == true)
-    {
-        Daemonize();
-    }
-    else
-    {
-        CLI::Run();
-    }
-    
     // Install signal handlers
     std::signal(SIGTERM, SignalHandler);
     std::signal(SIGILL, SignalHandler);
@@ -261,6 +252,16 @@ int main(int argc, const char* argv[])
         return EXIT_FAILURE;
     }
     
+    // Run as daemon or start cli thread
+    if (b_Daemon == true)
+    {
+        Daemonize();
+    }
+    else
+    {
+        CLI::Run();
+    }
+    
     // Start server
     try
     {
@@ -272,6 +273,7 @@ int main(int argc, const char* argv[])
                 ConnectionMain::Run(c_Config, b_Run);
                 break;
             case SERVER_COMMUNICATION:
+                CommunicationMain::Run(c_Config, b_Run);
                 break;
                 
             default:

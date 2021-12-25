@@ -41,7 +41,7 @@ public:
     //*************************************************************************************
     
     // Full unencrypted size
-    static constexpr size_t us_BufferSize = 2048;
+    static constexpr size_t us_BufferSize = 1024;
     
     // @NOTE: We want our ids to be 1 byte long at most (unsigned)
     //        Most ids are simply checked for their range and then handed off
