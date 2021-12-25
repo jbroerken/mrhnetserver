@@ -56,6 +56,11 @@ void ConnectionMain::Run(Configuration& c_Config, bool& b_Run)
         std::list<std::unique_ptr<WorkerShared>> l_ThreadInfo;
         size_t us_ThreadCount = std::thread::hardware_concurrency();
         
+        if (us_ThreadCount == 0)
+        {
+            us_ThreadCount = 1;
+        }
+        
         for (size_t i = 0; i < us_ThreadCount; ++i)
         {
             l_ThreadInfo.emplace_back(new Database(c_Config.s_MySQLAddress,

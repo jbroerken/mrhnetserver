@@ -109,10 +109,17 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
                 
             // Server Auth
             case NetMessage::C_MSG_AUTH_REQUEST:
-                b_MessageResult = AuthRequest(p_Shared, ToData<C_MSG_AUTH_REQUEST_DATA>(c_Message.v_Data));
+                if (AuthRequest(p_Shared, ToData<C_MSG_AUTH_REQUEST_DATA>(c_Message.v_Data)) == false)
+                {
+                    // Auth fail, kick
+                    return false;
+                }
                 break;
             case NetMessage::C_MSG_AUTH_PROOF:
-                b_MessageResult = AuthProof(ToData<C_MSG_AUTH_PROOF_DATA>(c_Message.v_Data));
+                if (AuthProof(ToData<C_MSG_AUTH_PROOF_DATA>(c_Message.v_Data)) == false)
+                {
+                    return false;
+                }
                 break;
                 
             // Channel
@@ -128,14 +135,7 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
                 break;
         }
         
-        if (b_MessageResult == true)
-        {
-            ++i_Recieved;
-        }
-        else
-        {
-            return false;
-        }
+        ++i_Recieved;
     }
     
     return true;
@@ -195,8 +195,7 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     }
     
     s_Mail = std::string(c_Request.p_Mail,
-                         c_Request.p_Mail + NetMessageV1::us_SizeAccountMail);
-    s_Mail = s_Mail.substr(0, strlen(s_Mail.c_str()));
+                         c_Request.p_Mail + strnlen(c_Request.p_Mail, NetMessageV1::us_SizeAccountMail));
     std::string s_Base64Password("");
     
     // Get data from table user_account first
@@ -327,27 +326,28 @@ bool ConnectionTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noex
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
-    else
+    
+    // Check for valid device key
+    std::string s_DeviceKey = std::string(c_Proof.p_DeviceKey,
+                                          c_Proof.p_DeviceKey + strnlen(c_Proof.p_DeviceKey, NetMessageV1::us_SizeDeviceKey));
+    bool b_Found = false;
+    
+    for (auto& DeviceKey : l_DeviceKey)
     {
-        bool b_Found = false;
-        
-        for (auto& DeviceKey : l_DeviceKey)
+        if (DeviceKey.compare(s_DeviceKey) == 0)
         {
-            if (DeviceKey.compare(c_Proof.p_DeviceKey) == 0)
-            {
-                b_Found = true;
-                break;
-            }
+            b_Found = true;
+            break;
         }
+    }
+    
+    if (b_Found == false)
+    {
+        Logger::Singleton().Log(Logger::ERROR, "Device key not found for account (Connection)",
+                                "ConnectionTask.cpp", __LINE__);
         
-        if (b_Found == false)
-        {
-            Logger::Singleton().Log(Logger::ERROR, "Device key not found for account (Connection)",
-                                    "ConnectionTask.cpp", __LINE__);
-            
-            SendAuthResult(NetMessage::ERR_SA_NO_DEVICE);
-            return DecrementAuthAttempt();
-        }
+        SendAuthResult(NetMessage::ERR_SA_NO_DEVICE);
+        return DecrementAuthAttempt();
     }
     
     // We are authenticated
@@ -395,8 +395,7 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
     
     // Get the channel list id first
     std::string s_ChannelName(c_Request.p_Channel,
-                              c_Request.p_Channel + NetMessageV1::us_SizeServerChannel);
-    s_ChannelName = s_ChannelName.substr(0, strlen(s_ChannelName.c_str()));
+                              c_Request.p_Channel + strnlen(c_Request.p_Channel, NetMessageV1::us_SizeServerChannel));
     uint32_t u32_ChannelID;
     
     try
@@ -442,16 +441,11 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             // This also shows us where the connection is held
             RowResult c_CDCResult = GetTable(p_Shared, p_CDCTableName)
                                             .select(p_CDCFieldName[CDC_CHANNEL_ID],             /* 0 */
-                                                    p_CDCFieldName[CDC_CONNECTION_LIST_ID],     /* 1 */
-                                                    p_CDCFieldName[CDC_CONNECTION_STATE])       /* 2 */
+                                                    p_CDCFieldName[CDC_CONNECTION_LIST_ID])     /* 1 */
                                             .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
-                                                   " == :valueA AND " +
-                                                   std::string(p_CDCFieldName[CDC_CONNECTION_STATE]) +
-                                                   " == :valueB")
-                                            .bind("valueA",
+                                                   " == :value")
+                                            .bind("value",
                                                   u32_ChannelID)
-                                            .bind("valueB",
-                                                  1) /* 1 = Only platform connected */
                                             .execute();
             
             // Now get the channel address

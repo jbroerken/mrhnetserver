@@ -145,7 +145,11 @@ std::shared_ptr<MessageExchange> ExchangeContainer::GetExchange(std::string cons
                               e_Type);
     }
     
-    // Check collision in keys
+    // Check collision in keys and return it
+    // @NOTE: We remove the shared ptr since only one
+    //        Client should be able to retrieve the copy.
+    //        If the platform client creates another one then thats
+    //        intentional by it for allowing multiple app clients
     if (It->second.size() == 1)
     {
         std::shared_ptr<MessageExchange> p_Result(It->second.front());

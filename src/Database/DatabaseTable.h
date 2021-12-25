@@ -249,9 +249,8 @@ namespace DatabaseTable
         CDC_CHANNEL_ID = 1,
         CDC_USER_UD = 2,
         CDC_DEVICE_KEY = 3,
-        CDC_CONNECTION_STATE = 4,
         
-        CDC_FIELDS_MAX = CDC_CONNECTION_STATE,
+        CDC_FIELDS_MAX = CDC_DEVICE_KEY,
         CDC_FIELDS_COUNT = CDC_FIELDS_MAX + 1
     };
     
@@ -260,8 +259,7 @@ namespace DatabaseTable
         "connection_list_id",
         "channel_id",
         "user_id",
-        "device_key",
-        "connection_state"
+        "device_key"
     };
     
     /**
@@ -280,7 +278,6 @@ namespace DatabaseTable
         uint32_t u32_ChannelID;
         uint32_t u32_UserID;
         std::string s_DeviceKey;
-        uint32_t u32_ConnectionState;
     };
 }
 
