@@ -95,8 +95,6 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
     
     while (i_Recieved < CONNECTION_TASK_MAX_MESSAGE_PER_LOOP && p_Connection->Recieve(c_Message) == true)
     {
-        bool b_MessageResult = true;
-        
         switch (c_Message.GetID())
         {
             /**
@@ -105,6 +103,10 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
                 
             // Availability
             case NetMessage::C_MSG_HELLO:
+                if (b_Authenticated == false)
+                {
+                    return false;
+                }
                 break;
                 
             // Server Auth
@@ -124,14 +126,21 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
                 
             // Channel
             case NetMessage::C_MSG_CHANNEL_REQUEST:
-                b_MessageResult = ChannelRequest(p_Shared, ToData<C_MSG_CHANNEL_REQUEST_DATA>(c_Message.v_Data));
+                if (ChannelRequest(p_Shared, ToData<C_MSG_CHANNEL_REQUEST_DATA>(c_Message.v_Data)) == false)
+                {
+                    return false;
+                }
                 break;
                 
             /**
-             *  Not Handled
+             *  Not Handled (Any version)
              */
                 
             default:
+                if (b_Authenticated == false)
+                {
+                    return false;
+                }
                 break;
         }
         

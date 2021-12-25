@@ -120,6 +120,11 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                     
                 // Availability
                 case NetMessage::C_MSG_HELLO:
+                    if (b_Authenticated == false)
+                    {
+                        // Kick connections which spam wrong stuff
+                        return false;
+                    }
                     break;
                     
                 // Server Auth
@@ -146,6 +151,11 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                 case NetMessage::S_MSG_CHANNEL_RESPONSE:
                 case NetMessage::C_MSG_CUSTOM: // Not handled by default server
                 case NetMessage::S_MSG_CUSTOM: // Not handled by default server
+                    if (b_Authenticated == false)
+                    {
+                        // Kick connections which spam wrong stuff
+                        return false;
+                    }
                     break;
                     
                 /**
@@ -153,6 +163,12 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                  */
                     
                 default:
+                    if (b_Authenticated == false)
+                    {
+                        // Kick if going around auth
+                        return false;
+                    }
+                    
                     GiveMessage(c_Message);
                     break;
             }
@@ -160,26 +176,39 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
             b_Processed = true;
         }
         
-        // Got something from the other client, send it
-        if (RetrieveMessage(c_Message) == true)
+        // Got something from the other client and we're authenticated for recieving
+        // @NOTE: if order is important, this way messages are retrieved and
+        //        discarded!
+        if (RetrieveMessage(c_Message) == true && b_Authenticated == true)
         {
-            // App client lost partner?
-            if (u8_ClientType == CLIENT_APP && c_Message.GetID() == NetMessage::S_MSG_PARTNER_CLOSED)
+            switch (c_Message.GetID())
             {
-                p_Connection->Send(c_Message);
-                
-                // Instant kick, app client no longer usable
-                return false;
-            }
-            else
-            {
-                p_Connection->Send(c_Message);
-                
-                b_Processed = true;
+                case NetMessage::S_MSG_PARTNER_CLOSED:
+                {
+                    p_Connection->Send(c_Message);
+                    
+                    // Kick clients other than platform which waits for partners
+                    if (u8_ClientType == CLIENT_PLATFORM)
+                    {
+                        b_Processed = true;
+                        break;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                    
+                default:
+                {
+                    p_Connection->Send(c_Message);
+                    b_Processed = true;
+                    break;
+                }
             }
         }
         
-        // Cancel early, nothing to do
+        // Cancel early? nothing to do
         if (b_Processed == false)
         {
             return true;
@@ -235,7 +264,7 @@ bool CommunicationTask::RetrieveMessage(NetMessage& c_Message) noexcept
                 return true;
             }
             
-            break;
+            return false;
         }
             
         case CLIENT_APP:
@@ -250,13 +279,11 @@ bool CommunicationTask::RetrieveMessage(NetMessage& c_Message) noexcept
                 return true;
             }
             
-            break;
+            return false;
         }
             
-        default: { break; }
+        default: { return false; }
     }
-    
-    return false;
 }
 
 //*************************************************************************************
@@ -477,7 +504,7 @@ bool CommunicationTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) n
             p_MessageExchange = c_ExchangeContainer.CreateExchange(s_DeviceKey);
             
             // Created, now commit to db that connection exists
-            // @TODO: Stored channel info, add to cdc table
+            // @TODO: Stored channel info, add to cdc table and active_channels total count increment
         }
         catch (ServerException& e)
         {
@@ -499,6 +526,13 @@ bool CommunicationTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) n
             //        Removing the chance for a second app client to connect
             //        with the first one. The second one errors out.
             p_MessageExchange = c_ExchangeContainer.GetExchange(s_DeviceKey);
+            
+            // Got exchange, clean for new communication
+            std::lock_guard<std::mutex> c_APGuard(p_MessageExchange->c_APMutex);
+            p_MessageExchange->l_APMessage.clear();
+            
+            std::lock_guard<std::mutex> c_PAGuard(p_MessageExchange->c_PAMutex);
+            p_MessageExchange->l_PAMessage.clear();
         }
         catch (ServerException& e)
         {
