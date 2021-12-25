@@ -1,5 +1,5 @@
 /**
- *  ConnectionServer.cpp
+ *  ConnectionMain.cpp
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.

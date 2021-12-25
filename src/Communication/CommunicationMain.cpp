@@ -25,7 +25,7 @@
 
 // Project
 #include "./CommunicationMain.h"
-//#include "./ConnectionTask.h"
+#include "./ExchangeContainer.h"//"./CommunicationTask.h"
 #include "../WorkerPool/WorkerPool.h"
 #include "../NetMessage/NetServer.h"
 #include "../Database/Database.h"
@@ -51,6 +51,9 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
                           c_Config.s_CertFilePath,
                           c_Config.s_KeyFilePath,
                           c_Config.i_ConnectionTimeoutS);
+        
+        // Create used message exchange
+        ExchangeContainer c_ExchangeContainer(SERVER_COMMUNICATION);
         
         // Now we need the worker context and threads
         std::list<std::unique_ptr<WorkerShared>> l_ThreadInfo;
