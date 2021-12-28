@@ -79,6 +79,14 @@ public:
     
     std::shared_ptr<MessageExchange> CreateExchange(std::string const& s_DeviceKey);
     
+    /**
+     *  Add a message exchange object owned by a client to be retrieved by another client.
+     *
+     *  \param p_Exchange The message exchange object.
+     */
+    
+    void AddExchange(std::shared_ptr<MessageExchange> p_Exchange);
+    
     //*************************************************************************************
     // Remove
     //*************************************************************************************

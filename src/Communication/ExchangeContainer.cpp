@@ -92,6 +92,24 @@ std::shared_ptr<MessageExchange> ExchangeContainer::CreateExchange(std::string c
     }
 }
 
+void ExchangeContainer::AddExchange(std::shared_ptr<MessageExchange> p_Exchange)
+{
+    uint32_t u32_Hash = HashDeviceKey(p_Exchange->s_DeviceKey);
+    
+    std::lock_guard<std::mutex> c_Guard(c_Mutex);
+    
+    // Already a hash for this?
+    auto It = m_Exchange.find(u32_Hash);
+    
+    if (It == m_Exchange.end())
+    {
+        throw ServerException("No hash slot for device key " + p_Exchange->s_DeviceKey,
+                              e_Type);
+    }
+    
+    It->second.emplace_back(p_Exchange);
+}
+
 //*************************************************************************************
 // Remove
 //*************************************************************************************

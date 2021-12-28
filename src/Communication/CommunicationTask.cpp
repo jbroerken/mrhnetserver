@@ -190,6 +190,10 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                     // Kick clients other than platform which waits for partners
                     if (u8_ClientType == CLIENT_PLATFORM)
                     {
+                        // Clear and return exchange for later app client
+                        ClearExchange();
+                        c_ExchangeContainer.AddExchange(p_MessageExchange);
+                        
                         b_Processed = true;
                         break;
                     }
@@ -220,6 +224,15 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
     }
     
     return true;
+}
+
+void CommunicationTask::ClearExchange() noexcept
+{
+    std::lock_guard<std::mutex> c_APGuard(p_MessageExchange->c_APMutex);
+    p_MessageExchange->l_APMessage.clear();
+    
+    std::lock_guard<std::mutex> c_PAGuard(p_MessageExchange->c_PAMutex);
+    p_MessageExchange->l_PAMessage.clear();
 }
 
 //*************************************************************************************
@@ -528,11 +541,7 @@ bool CommunicationTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) n
             p_MessageExchange = c_ExchangeContainer.GetExchange(s_DeviceKey);
             
             // Got exchange, clean for new communication
-            std::lock_guard<std::mutex> c_APGuard(p_MessageExchange->c_APMutex);
-            p_MessageExchange->l_APMessage.clear();
-            
-            std::lock_guard<std::mutex> c_PAGuard(p_MessageExchange->c_PAMutex);
-            p_MessageExchange->l_PAMessage.clear();
+            ClearExchange();
         }
         catch (ServerException& e)
         {

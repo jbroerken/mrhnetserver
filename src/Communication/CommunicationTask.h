@@ -95,6 +95,12 @@ private:
     
     bool RetrieveMessage(NetMessage& c_Message) noexcept;
     
+    /**
+     *  Clear the owned message exchange object.
+     */
+    
+    void ClearExchange() noexcept;
+    
     //*************************************************************************************
     // Auth
     //*************************************************************************************
