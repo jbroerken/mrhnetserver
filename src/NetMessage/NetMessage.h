@@ -62,36 +62,37 @@ public:
          */
         
         // Unk
-        CS_MSG_UNK = 0,                 // All - Unknown / Error
+        CS_MSG_UNK = 0,                     // All - Unknown / Error
         
         // Availability
-        C_MSG_HELLO = 1,                // Client - Client still valid (Process ok, etc)
-        S_MSG_PARTNER_CLOSED = 2,       // Server - A client closed connection (for other clients, etc.)
+        C_MSG_HELLO = 1,                    // Client - Client still valid (Process ok, etc)
+        S_MSG_PARTNER_CLOSED = 2,           // Server - A client closed connection (for other clients, etc.)
         
         // Server Auth
-        C_MSG_AUTH_REQUEST = 3,         // Client - Request authentication
-        S_MSG_AUTH_CHALLENGE = 4,       // Server - Challenge client to provide auth data
-        C_MSG_AUTH_PROOF = 5,           // Client - Provide proof of valid auth data
-        S_MSG_AUTH_RESULT = 6,          // Server - Proof check result
+        C_MSG_AUTH_REQUEST = 3,             // Client - Request authentication
+        S_MSG_AUTH_CHALLENGE = 4,           // Server - Challenge client to provide auth data
+        C_MSG_AUTH_PROOF = 5,               // Client - Provide proof of valid auth data
+        S_MSG_AUTH_RESULT = 6,              // Server - Proof check result
         
-        // Device Auth
-        C_MSG_PAIR_CHALLENGE = 7,       // Client - Give nonce etc to partner to hash
-        C_MSG_PAIR_PROOF,               // Client - Return the hashed nonce etc
-        C_MSG_PAIR_RESULT,              // Client - Result of pair comparison
+        // Device Pairing
+        C_MSG_PAIR_REQUEST = 7,             // Client - Request pairing with platform client
+        C_MSG_PAIR_CHALLENGE,               // Client - Give nonce to app client to hash
+        C_MSG_PAIR_PROOF,                   // Client - Return the hashed nonce to platform client
+        C_MSG_PAIR_RESULT,                  // Client - Result of pairing with platform client
         
         // Channel
-        C_MSG_CHANNEL_REQUEST,          // Client - Request channel info
-        S_MSG_CHANNEL_RESPONSE,         // Server - Provide channel info
+        C_MSG_CHANNEL_REQUEST,              // Client - Request channel info
+        S_MSG_CHANNEL_RESPONSE,             // Server - Provide channel info
         
         // Text
-        C_MSG_TEXT,                     // Client - Send text string
+        C_MSG_TEXT,                         // Client - Send text string
         
         // Location
-        C_MSG_LOCATION,                 // Client - Send location data
+        C_MSG_LOCATION,                     // Client - Send location data
         
         // Custom
-        C_MSG_CUSTOM,                   // Client - Custom message
-        S_MSG_CUSTOM,                   // Server - Custom message
+        C_MSG_CUSTOM,                       // Client - Custom message
+        S_MSG_CUSTOM,                       // Server - Custom message
         
         /**
          *  Bounds

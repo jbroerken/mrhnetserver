@@ -40,7 +40,8 @@ namespace ServerAuth
      *  Extract the password hash from a base64 password string.
      *
      *  \param s_Base64 The base 64 string to use.
-     *  \param s_Password The password hash to set.
+     *  \param s_Password The password hash to set. Will be set to size
+     *                MRH_NetMessageV1::us_SizeAccountPassword.
      *
      *  \return true on success, false on failure.
      */
@@ -51,7 +52,8 @@ namespace ServerAuth
      *  Extract the salt from a base64 password string.
      *
      *  \param s_Base64 The base 64 string to use.
-     *  \param s_Salt The salt to set.
+     *  \param s_Salt The salt to set. Will be set to size
+     *                MRH_NetMessageV1::us_SizeAccountPasswordSalt.
      *
      *  \return true on success, false on failure.
      */
@@ -68,10 +70,11 @@ namespace ServerAuth
      *  \param u32_Nonce The nonce to compare with.
      *  \param p_EncryptedNonce The encrypted none. Needs to be of size
      *                          MRH_NetMessageV1::us_SizeNonceHash.
-     *  \param p_Key The key to decrypt the nonce with.
+     *  \param p_Key The key to decrypt the nonce with. Needs to be of size
+     *                          MRH_NetMessageV1::us_SizeAccountPassword.
      */
     
-    bool CompareNonce(uint32_t u32_Nonce, const char* p_EncryptedNonce, const char* p_Key) noexcept;
+    bool CompareNonce(uint32_t u32_Nonce, const uint8_t* p_EncryptedNonce, const char* p_Key) noexcept;
 };
 
 #endif /* ServerAuth_h */

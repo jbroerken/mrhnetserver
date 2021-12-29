@@ -43,10 +43,10 @@ namespace NetMessageV1
     
     // Account
     constexpr size_t us_SizeAccountMail = 128;
-    constexpr size_t us_SizeAccountPassword = crypto_secretbox_KEYBYTES;
-    constexpr size_t us_SizeAccountPasswordSalt = crypto_pwhash_SALTBYTES;
+    constexpr size_t us_SizeAccountPassword = 32; // crypto_secretbox_KEYBYTES and crypto_box_SEEDBYTES
+    constexpr size_t us_SizeAccountPasswordSalt = 16; // crypto_pwhash_SALTBYTES
     
-    constexpr size_t us_SizeNonceHash = crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + sizeof(uint32_t);
+    constexpr size_t us_SizeNonceHash = 24 + 16 + sizeof(uint32_t); // crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + sizeof(uint32_t);
     
     // Device
     constexpr size_t us_SizeDeviceKey = 25;
@@ -78,7 +78,7 @@ namespace NetMessageV1
     
     struct C_MSG_AUTH_PROOF_DATA
     {
-        char p_NonceHash[us_SizeNonceHash]; // Created hash
+        uint8_t p_NonceHash[us_SizeNonceHash]; // Created hash
         char p_DeviceKey[us_SizeDeviceKey]; // Device valid for server
     };
     

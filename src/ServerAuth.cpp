@@ -73,7 +73,7 @@ bool ServerAuth::ExtractSalt(std::string const& s_Base64, std::string& s_Salt) n
 // Nonce
 //*************************************************************************************
 
-bool ServerAuth::CompareNonce(uint32_t u32_Nonce, const char* p_EncryptedNonce, const char* p_Key) noexcept
+bool ServerAuth::CompareNonce(uint32_t u32_Nonce, const uint8_t* p_EncryptedNonce, const char* p_Key) noexcept
 {
     if (p_EncryptedNonce == NULL || p_Key == NULL)
     {
