@@ -67,7 +67,8 @@ ConnectionTask::ConnectionTask(std::unique_ptr<NetConnection>& p_Connection) : W
                                                                                b_Authenticated(false),
                                                                                s32_AuthAttempts(CONNECTION_TASK_MAX_AUTH_RETRY),
                                                                                u8_ClientType(ACTOR_TYPE_COUNT),
-                                                                               s_Password("")
+                                                                               s_Password(""),
+                                                                               s_UsedDeviceKey("")
 {
     if (this->p_Connection == NULL || this->p_Connection->GetConnected() == false)
     {
@@ -346,6 +347,7 @@ bool ConnectionTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noex
         if (DeviceKey.compare(s_DeviceKey) == 0)
         {
             b_Found = true;
+            s_UsedDeviceKey = s_DeviceKey; // Remember for later
             break;
         }
     }
@@ -402,46 +404,15 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         return false;
     }
     
-    // Get the channel list id first
+    // Get the channel list first
     std::string s_ChannelName(c_Request.p_Channel,
                               c_Request.p_Channel + strnlen(c_Request.p_Channel, NetMessageV1::us_SizeServerChannel));
-    uint32_t u32_ChannelID;
     
-    try
-    {
-        RowResult c_Result = GetTable(p_Shared, p_CLTableName)
-                                     .select(p_CLFieldName[CL_CHANNEL_ID],  /* 0 */
-                                             p_CLFieldName[CL_NAME])        /* 1 */
-                                     .where(std::string(p_CLFieldName[CL_NAME]) +
-                                            " == :value")
-                                     .bind("value",
-                                           s_ChannelName)
-                                     .execute();
-        
-        if (c_Result.count() == 1) // Unique channel rows
-        {
-            u32_ChannelID = c_Result.fetchOne()[0].get<uint32_t>();
-        }
-        else
-        {
-            Logger::Singleton().Log(Logger::ERROR, "Invalid results for channel name (Connection)",
-                                    "ConnectionTask.cpp", __LINE__);
-            
-            SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_SG_ERROR);
-            return true;
-        }
-    }
-    catch (std::exception& e)
-    {
-        Logger::Singleton().Log(Logger::ERROR, std::string(e.what()) + " (Connection)",
-                                "ConnectionTask.cpp", __LINE__);
-        
-        // We failed, send result
-        SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_CR_NO_CHANNEL);
-        return true; // Keep active
-    }
-    
-    // Now handle based on client type
+    // App clients want a already existing connection, platform clients empty servers
+    // Platform clients can therefore simply check by channel name which server is the least occupied.
+    // App clients check first which connections for the device key exist, and those connections are then
+    // used to find the servers they're connected to. If one is connected to the request channel we return
+    // said channel
     if (u8_ClientType == CLIENT_APP)
     {
         try
@@ -449,12 +420,12 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             // First we need to check for an actual platform connection
             // This also shows us where the connection is held
             RowResult c_CDCResult = GetTable(p_Shared, p_CDCTableName)
-                                            .select(p_CDCFieldName[CDC_CHANNEL_ID],             /* 0 */
-                                                    p_CDCFieldName[CDC_CONNECTION_LIST_ID])     /* 1 */
-                                            .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
+                                            .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
+                                                    p_CDCFieldName[CDC_DEVICE_KEY])     /* 1 */
+                                            .where(std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
                                                    " == :value")
                                             .bind("value",
-                                                  u32_ChannelID)
+                                                  s_UsedDeviceKey)
                                             .execute();
             
             // Now get the channel address
@@ -470,29 +441,32 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             
             for (size_t i = 0; i < us_Count; ++i)
             {
-                RowResult c_ACResult = GetTable(p_Shared, p_ACTableName)
-                                                .select(p_ACFieldName[AC_CHANNEL_ID],           /* 0 */
-                                                        p_ACFieldName[AC_ADDRESS],              /* 1 */
-                                                        p_ACFieldName[AC_PORT],                 /* 2 */
-                                                        p_ACFieldName[AC_CONNECTION_LIST_ID],   /* 3 */
-                                                        p_ACFieldName[AC_LAST_UPDATE])          /* 4 */
-                                                .where(std::string(p_ACFieldName[AC_CHANNEL_ID]) +
-                                                       " == :valueA AND " +
-                                                       std::string(p_ACFieldName[AC_CONNECTION_LIST_ID]) +
-                                                       " == :valueB")
-                                                .bind("valueA",
-                                                      u32_ChannelID)
-                                                .bind("valueB",
-                                                      c_CDCResult.fetchOne()[1].get<uint32_t>())
-                                                .execute();
+                RowResult c_CLResult = GetTable(p_Shared, p_CLTableName)
+                                               .select(p_CLFieldName[CL_CHANNEL_ID],   /* 0 */
+                                                       p_CLFieldName[CL_NAME],         /* 1 */
+                                                       p_CLFieldName[CL_ADDRESS],      /* 2 */
+                                                       p_CLFieldName[CL_PORT],         /* 3 */
+                                                       p_CLFieldName[CL_IS_ACTIVE],    /* 4 */
+                                                       p_CLFieldName[CL_LAST_UPDATE])  /* 5 */
+                                               .where(std::string(p_CLFieldName[CL_CHANNEL_ID]) +
+                                                      " == :valueA AND " +
+                                                      std::string(p_CLFieldName[CL_NAME]) +
+                                                      " == :valueB AND " +
+                                                      std::string(p_CLFieldName[CL_IS_ACTIVE]) +
+                                                      " == 1")
+                                               .bind("valueA",
+                                                     c_CDCResult.fetchOne()[0].get<uint32_t>())
+                                               .bind("valueB",
+                                                     s_ChannelName)
+                                               .execute();
                 
                 // Check row result, there should be only one!
-                if (c_ACResult.count() != 1)
+                if (c_CLResult.count() != 1)
                 {
                     continue;
                 }
                 
-                Row c_Row = c_ACResult.fetchOne();
+                Row c_Row = c_CLResult.fetchOne();
                 
                 // Now check the last update
                 uint64_t u64_RowUpdate = c_Row[4].get<uint64_t>();
@@ -526,23 +500,27 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             return true;
         }
     }
-    else // Platform client, checked on auth
+    else if (u8_ClientType == CLIENT_PLATFORM)
     {
         try
         {
             // First we need to grab all active channels based based on our
             // channel identifier
-            RowResult c_Result = GetTable(p_Shared, p_ACTableName)
-                                            .select(p_ACFieldName[AC_CHANNEL_ID],   /* 0 */
-                                                    p_ACFieldName[AC_ADDRESS],      /* 1 */
-                                                    p_ACFieldName[AC_PORT],         /* 2 */
-                                                    p_ACFieldName[AC_CONNECTIONS],  /* 3 */
-                                                    p_ACFieldName[AC_LAST_UPDATE])  /* 4 */
-                                            .where(std::string(p_ACFieldName[AC_CHANNEL_ID]) +
-                                                   " == :value")
-                                            .bind("value",
-                                                  u32_ChannelID)
-                                            .execute();
+            RowResult c_Result = GetTable(p_Shared, p_CLTableName)
+                                         .select(p_CLFieldName[CL_CHANNEL_ID],              /* 0 */
+                                                 p_CLFieldName[CL_NAME],                    /* 1 */
+                                                 p_CLFieldName[CL_ADDRESS],                 /* 2 */
+                                                 p_CLFieldName[CL_PORT],                    /* 3 */
+                                                 p_CLFieldName[CL_ASSISTANT_CONNECTIONS],   /* 4 */
+                                                 p_CLFieldName[CL_IS_ACTIVE],               /* 5 */
+                                                 p_CLFieldName[CL_LAST_UPDATE])             /* 6 */
+                                         .where(std::string(p_CLFieldName[CL_NAME]) +
+                                                " == :value AND " +
+                                                std::string(p_CLFieldName[CL_IS_ACTIVE]) +
+                                                " == 1")
+                                         .bind("value",
+                                               s_ChannelName)
+                                         .execute();
             
             // Now get the channel address
             std::string s_Address("");
@@ -561,8 +539,8 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                 Row c_Row = c_Result.fetchOne();
                 
                 // We need to check update time and connections
-                uint64_t u64_RowUpdate = c_Row[4].get<uint64_t>();
-                uint32_t u32_RowConnections = c_Row[3].get<uint32_t>();
+                uint64_t u64_RowUpdate = c_Row[6].get<uint64_t>();
+                uint32_t u32_RowConnections = c_Row[4].get<uint32_t>();
                 
                 // TEST
                 //u64_RowUpdate = (uint64_t) - 1;
@@ -577,8 +555,8 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                 }
                 
                 // Now set the channel info
-                s_Address = c_Row[1].get<std::string>();
-                u32_Port = c_Row[2].get<int32_t>();
+                s_Address = c_Row[2].get<std::string>();
+                u32_Port = c_Row[3].get<int32_t>();
                 u8_Result = NetMessage::ERR_NONE;
             }
             
@@ -594,5 +572,12 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_CR_NO_CHANNEL);
             return true;
         }
+    }
+    else
+    {
+        // This shouldn't be reached because auth blocks on wrong actor type.
+        // Keep anyway if for any reason a wrong actor type is stored
+        SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_SG_ERROR);
+        return true;
     }
 }

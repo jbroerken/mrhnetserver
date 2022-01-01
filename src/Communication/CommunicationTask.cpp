@@ -63,14 +63,16 @@ namespace
 //*************************************************************************************
 
 CommunicationTask::CommunicationTask(std::unique_ptr<NetConnection>& p_Connection,
-                                     ExchangeContainer& c_ExchangeContainer) : WorkerTask(),
-                                                                               p_Connection(p_Connection.release()),
-                                                                               c_ExchangeContainer(c_ExchangeContainer),
-                                                                               p_MessageExchange(NULL),
-                                                                               b_Authenticated(false),
-                                                                               s32_AuthAttempts(COMMUNICATION_TASK_MAX_AUTH_RETRY),
-                                                                               u8_ClientType(ACTOR_TYPE_COUNT),
-                                                                               s_Password("")
+                                     ExchangeContainer& c_ExchangeContainer,
+                                     uint32_t u32_ChannelID) : WorkerTask(),
+                                                               p_Connection(p_Connection.release()),
+                                                               c_ExchangeContainer(c_ExchangeContainer),
+                                                               p_MessageExchange(NULL),
+                                                               u32_ChannelID(u32_ChannelID),
+                                                               b_Authenticated(false),
+                                                               s32_AuthAttempts(COMMUNICATION_TASK_MAX_AUTH_RETRY),
+                                                               u8_ClientType(ACTOR_TYPE_COUNT),
+                                                               s_Password("")
 {
     if (this->p_Connection == NULL || this->p_Connection->GetConnected() == false)
     {
@@ -136,7 +138,7 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                     }
                     break;
                 case NetMessage::C_MSG_AUTH_PROOF:
-                    if (AuthProof(ToData<C_MSG_AUTH_PROOF_DATA>(c_Message.v_Data)) == false)
+                    if (AuthProof(p_Shared, ToData<C_MSG_AUTH_PROOF_DATA>(c_Message.v_Data)) == false)
                     {
                         // Auth fail, kick
                         return false;
@@ -149,8 +151,7 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                 case NetMessage::S_MSG_AUTH_RESULT:
                 case NetMessage::C_MSG_CHANNEL_REQUEST:
                 case NetMessage::S_MSG_CHANNEL_RESPONSE:
-                case NetMessage::C_MSG_CUSTOM: // Not handled by default server
-                case NetMessage::S_MSG_CUSTOM: // Not handled by default server
+                case NetMessage::CS_MSG_CUSTOM: // Not handled by default server
                     if (b_Authenticated == false)
                     {
                         // Kick connections which spam wrong stuff
@@ -461,7 +462,7 @@ bool CommunicationTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
     return true;
 }
 
-bool CommunicationTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noexcept
+bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noexcept
 {
     // Build result data
     S_MSG_AUTH_RESULT_DATA c_Result;
@@ -513,11 +514,38 @@ bool CommunicationTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) n
     {
         try
         {
+            // Check if a platform connection for this device key already exists
+            RowResult c_CDCResult = GetTable(p_Shared, p_CDCTableName)
+                                            .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
+                                                    p_CDCFieldName[CDC_DEVICE_KEY])     /* 1 */
+                                            .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
+                                                   " == :valueA AND " +
+                                                   std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
+                                                   " == :valueB")
+                                            .bind("valueA",
+                                                  u32_ChannelID)
+                                            .bind("valueB",
+                                                  s_DeviceKey)
+                                            .execute();
+            
+            if (c_CDCResult.count() != 0)
+            {
+                SendAuthResult(NetMessage::ERR_SA_ALREADY_CONNECTED);
+                return DecrementAuthAttempt();
+            }
+            
             // First, create a exchange for app client access
             p_MessageExchange = c_ExchangeContainer.CreateExchange(s_DeviceKey);
             
             // Created, now commit to db that connection exists
-            // @TODO: Stored channel info, add to cdc table and active_channels total count increment
+            GetTable(p_Shared, p_CDCTableName)
+                    .insert(p_CDCFieldName[CDC_CHANNEL_ID],
+                            p_CDCFieldName[CDC_DEVICE_KEY])
+                    .values(u32_ChannelID,
+                            s_DeviceKey)
+                    .execute();
+            
+            // @TODO: update assistant_connections field
         }
         catch (ServerException& e)
         {
@@ -530,7 +558,7 @@ bool CommunicationTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) n
             return DecrementAuthAttempt();
         }
     }
-    else // Auth request sets this to only be platform or app client
+    else if (u8_ClientType == CLIENT_APP)
     {
         try
         {
@@ -551,6 +579,14 @@ bool CommunicationTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) n
             SendAuthResult(NetMessage::ERR_SA_NO_DEVICE);
             return DecrementAuthAttempt();
         }
+    }
+    else
+    {
+        Logger::Singleton().Log(Logger::ERROR, "Unknown actor type (Communication)",
+                                "CommunicationTask.cpp", __LINE__);
+        
+        SendAuthResult(NetMessage::ERR_SG_ERROR);
+        return DecrementAuthAttempt();
     }
     
     // We are authenticated

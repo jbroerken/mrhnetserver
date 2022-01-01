@@ -92,13 +92,13 @@ public:
         
         // Custom
         C_MSG_CUSTOM,                       // Client - Custom message
-        S_MSG_CUSTOM,                       // Server - Custom message
+        CS_MSG_CUSTOM,                      // All - Custom message
         
         /**
          *  Bounds
          */
         
-        NET_MESSAGE_LIST_MAX = S_MSG_CUSTOM,
+        NET_MESSAGE_LIST_MAX = CS_MSG_CUSTOM,
         
         NET_MESSAGE_LIST_COUNT = NET_MESSAGE_LIST_MAX + 1
     };
@@ -123,7 +123,8 @@ public:
         ERR_SA_VERSION = 4,                 // Wrong OpCode Version
         ERR_SA_UNK_ACTOR = 5,               // Unknown actor id
         ERR_SA_ACCOUNT = 6,                 // Account data given was wrong
-        ERR_SA_MAINTENANCE = 7,             // Temporary downtime
+        ERR_SA_ALREADY_CONNECTED = 7,       // Connection already exists
+        ERR_SA_MAINTENANCE,                 // Temporary downtime
         
         // Channel
         ERR_CR_NO_CHANNEL,                  // No channel was found for identifier

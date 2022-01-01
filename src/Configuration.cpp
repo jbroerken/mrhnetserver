@@ -54,10 +54,10 @@ namespace
         // Connection Server
         
         // Communication Server
-        CHANNEL_NAME,
+        COM_CHANNEL_ID,
         
         // Bounds
-        IDENTIFIER_MAX = CHANNEL_NAME,
+        IDENTIFIER_MAX = COM_CHANNEL_ID,
         
         IDENTIFIER_COUNT = IDENTIFIER_MAX + 1
     };
@@ -84,7 +84,7 @@ namespace
         // Connection Server
         
         // Communication Server
-        "ComChannelName="
+        "ComChannelID="
     };
 }
 
@@ -106,7 +106,7 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
                                                               s_MySQLUser("user"),
                                                               s_MySQLPassword(""),
                                                               s_MySQLDatabase("mrhnetserver"),
-                                                              s_ChannelName("de.mrh.unknown")
+                                                              i_ChannelID(-1)
 {
     std::ifstream f_File(s_FilePath);
     std::string s_Line;
@@ -195,8 +195,8 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
                     // Connection Server
                         
                     // Communication Server
-                    case CHANNEL_NAME:
-                        s_ChannelName = s_Line;
+                    case COM_CHANNEL_ID:
+                        i_ChannelID = std::stoi(s_Line);
                         break;
                         
                     // Unknown

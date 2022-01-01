@@ -46,10 +46,12 @@ public:
      *
      *  \param p_Connection The connection for the task.
      *  \param c_ExchangeContainer The container used for message exchanges.
+     *  \param u32_ChannelID The channel id provided by the communication server.
      */
     
     CommunicationTask(std::unique_ptr<NetConnection>& p_Connection,
-                      ExchangeContainer& c_ExchangeContainer);
+                      ExchangeContainer& c_ExchangeContainer,
+                      uint32_t u32_ChannelID);
     
     /**
      *  Default destructor.
@@ -135,12 +137,13 @@ private:
     /**
      *  Handle a recieved client authenticate proof.
      *
+     *  \param p_Shared The thread shared worker data.
      *  \param c_Proof The client proof message.
      *
      *  \return true if the connection should be kept, false if not.
      */
     
-    bool AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noexcept;
+    bool AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noexcept;
     
     //*************************************************************************************
     // Data
@@ -150,6 +153,9 @@ private:
     std::unique_ptr<NetConnection> p_Connection;
     ExchangeContainer& c_ExchangeContainer;
     std::shared_ptr<MessageExchange> p_MessageExchange;
+    
+    // Channel
+    uint32_t u32_ChannelID;
     
     // Authentication
     bool b_Authenticated;

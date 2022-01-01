@@ -145,67 +145,24 @@ namespace DatabaseTable
     {
         CL_CHANNEL_ID = 0,
         CL_NAME = 1,
+        CL_ADDRESS = 2,
+        CL_PORT = 3,
+        CL_ASSISTANT_CONNECTIONS = 4,
+        CL_IS_ACTIVE = 5,
+        CL_LAST_UPDATE = 6,
         
-        CL_FIELDS_MAX = CL_NAME,
+        CL_FIELDS_MAX = CL_LAST_UPDATE,
         CL_FIELDS_COUNT = CL_FIELDS_MAX + 1
     };
     
     constexpr const char* p_CLFieldName[CL_FIELDS_COUNT] =
     {
         "channel_id",
-        "name"
-    };
-    
-    /**
-     *  Row Data
-     */
-    
-    struct CLRow
-    {
-    public:
-        
-        //*************************************************************************************
-        // Data
-        //*************************************************************************************
-        
-        uint32_t u32_ChannelID;
-        std::string s_Identifier;
-    };
-    
-    //*************************************************************************************
-    // Active Channels Table
-    //*************************************************************************************
-    
-    /**
-     *  Table Name
-     */
-    
-    constexpr const char* p_ACTableName = "active_channels";
-    
-    /**
-     *  Field Names
-     */
-    
-    enum ACFields
-    {
-        AC_CHANNEL_ID = 0,
-        AC_ADDRESS = 1,
-        AC_PORT = 2,
-        AC_CONNECTIONS = 3,
-        AC_CONNECTION_LIST_ID = 4,
-        AC_LAST_UPDATE = 5,
-        
-        AC_FIELDS_MAX = AC_LAST_UPDATE,
-        AC_FIELDS_COUNT = AC_FIELDS_MAX + 1
-    };
-    
-    constexpr const char* p_ACFieldName[AC_FIELDS_COUNT] =
-    {
-        "channel_id",
+        "name",
         "address",
         "port",
-        "connections",
-        "connection_list_id",
+        "assistant_connections",
+        "is_active",
         "last_update_s"
     };
     
@@ -222,10 +179,11 @@ namespace DatabaseTable
         //*************************************************************************************
         
         uint32_t u32_ChannelID;
+        std::string s_Name;
         std::string s_Address;
         int32_t s32_Port;
-        uint32_t u32_Connections;
-        uint32_t u32_ConnectionListID;
+        uint32_t u32_AssistantConnections;
+        int32_t s32_IsActive;
         uint64_t u64_LastUpdate;
     };
     
@@ -245,10 +203,9 @@ namespace DatabaseTable
     
     enum CDCFields
     {
-        CDC_CONNECTION_LIST_ID = 0,
-        CDC_CHANNEL_ID = 1,
-        CDC_USER_UD = 2,
-        CDC_DEVICE_KEY = 3,
+        CDC_CHANNEL_ID = 0,
+        CDC_USER_UD = 1,
+        CDC_DEVICE_KEY = 2,
         
         CDC_FIELDS_MAX = CDC_DEVICE_KEY,
         CDC_FIELDS_COUNT = CDC_FIELDS_MAX + 1
@@ -256,7 +213,6 @@ namespace DatabaseTable
     
     constexpr const char* p_CDCFieldName[CDC_FIELDS_COUNT] =
     {
-        "connection_list_id",
         "channel_id",
         "user_id",
         "device_key"
@@ -274,7 +230,6 @@ namespace DatabaseTable
         // Data
         //*************************************************************************************
         
-        uint32_t u32_ConnectionListID;
         uint32_t u32_ChannelID;
         uint32_t u32_UserID;
         std::string s_DeviceKey;

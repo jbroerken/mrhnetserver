@@ -82,7 +82,7 @@ public:
     // Connection Server
     
     // Communication Server
-    std::string s_ChannelName;
+    int i_ChannelID;
     
 private:
     

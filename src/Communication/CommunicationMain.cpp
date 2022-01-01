@@ -74,6 +74,8 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
                                                    c_Config.s_MySQLDatabase));
         }
         
+        // @TODO: Set Active in CLTable
+        
         WorkerPool c_WorkerPool(l_ThreadInfo,
                                 SERVER_CONNECTION,
                                 c_Config.i_MessagePulseMS);
@@ -95,7 +97,8 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
                 try
                 {
                     std::unique_ptr<WorkerTask> p_Task = std::make_unique<CommunicationTask>(Connection,
-                                                                                             c_ExchangeContainer);
+                                                                                             c_ExchangeContainer,
+                                                                                             c_Config.i_ChannelID);
                     c_WorkerPool.AddTask(p_Task);
                 }
                 catch (ServerException& e)
@@ -124,6 +127,8 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
         
         // Server end, shutdown
         c_NetServer.Stop();
+        
+        // @TODO: Clear Connections for ChannelID (CDC) and is_Active = 0 (CL)
     }
     catch (NetException& e)
     {

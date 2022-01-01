@@ -149,6 +149,7 @@ private:
     int32_t s32_AuthAttempts;
     uint32_t u32_Nonce;
     uint8_t u8_ClientType;
+    std::string s_UsedDeviceKey;
     
     // User Account Data
     uint32_t u32_UserID;
