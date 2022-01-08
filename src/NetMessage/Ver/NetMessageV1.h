@@ -65,6 +65,7 @@ namespace NetMessageV1
     struct C_MSG_AUTH_REQUEST_DATA
     {
         char p_Mail[us_SizeAccountMail]; // The account mail
+        char p_DeviceKey[us_SizeDeviceKey]; // Device valid for server
         uint8_t u8_Actor;  // Which type of client (platform or app)
         uint8_t u8_Version; // NetMessage version in use
     };
@@ -79,7 +80,6 @@ namespace NetMessageV1
     struct C_MSG_AUTH_PROOF_DATA
     {
         uint8_t p_NonceHash[us_SizeNonceHash]; // Created hash
-        char p_DeviceKey[us_SizeDeviceKey]; // Device valid for server
     };
     
     struct S_MSG_AUTH_RESULT_DATA

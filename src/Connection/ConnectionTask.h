@@ -149,16 +149,10 @@ private:
     int32_t s32_AuthAttempts;
     uint32_t u32_Nonce;
     uint8_t u8_ClientType;
-    std::string s_UsedDeviceKey;
     
     // User Account Data
-    uint32_t u32_UserID;
-    std::string s_Mail;
     std::string s_Password;
-    std::string s_Salt;
-    
-    // User Device Table
-    std::list<std::string> l_DeviceKey;
+    std::string s_DeviceKey;
     
 protected:
     

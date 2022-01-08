@@ -32,6 +32,85 @@
 #include "../Timer.h"
 #include "../Logger.h"
 
+// Pre-defined
+#ifndef COMMUNICATION_SERVER_SET_LAST_UPDATE_MS
+    #define COMMUNICATION_SERVER_SET_LAST_UPDATE_MS 30 * 1000
+#endif
+
+//*************************************************************************************
+// Channel List
+//*************************************************************************************
+
+static void SetIsActive(Database& c_Database, int i_ChannelID, bool b_IsActive)
+{
+    try
+    {
+        mysqlx::Schema c_Schema = c_Database
+                                    .c_Session
+                                    .getSchema(c_Database.s_Database);
+        
+        c_Schema
+            .getTable(DatabaseTable::p_CLTableName)
+            .update()
+            .set(DatabaseTable::p_CLFieldName[DatabaseTable::CL_IS_ACTIVE],
+                 (b_IsActive ? 1 : 0))
+            .where(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_CHANNEL_ID]) +
+                   " == :value")
+            .bind("value",
+                  i_ChannelID)
+            .execute();
+        
+        if (b_IsActive == true)
+        {
+            return;
+        }
+        
+        c_Schema
+            .getTable(DatabaseTable::p_CDCTableName)
+            .remove()
+            .where(std::string(DatabaseTable::p_CDCFieldName[DatabaseTable::CDC_CHANNEL_ID]) +
+                   " == :value")
+            .bind("value",
+                  i_ChannelID)
+            .execute();
+    }
+    catch (std::exception& e)
+    {
+        if (b_IsActive == false)
+        {
+            Logger::Singleton().Log(Logger::ERROR, e.what(),
+                                    "CommunicationMain.cpp", __LINE__);
+        }
+        else
+        {
+            throw ServerException("Failed to set active: " + std::string(e.what()), SERVER_COMMUNICATION);
+        }
+    }
+}
+
+static void SetLastUpdate(Database& c_Database, int i_ChannelID) noexcept
+{
+    try
+    {
+        c_Database
+            .c_Session
+            .getSchema(c_Database.s_Database)
+            .getTable(c_Database.s_Database)
+            .update()
+            .set(DatabaseTable::p_CLFieldName[DatabaseTable::CL_LAST_UPDATE],
+                 time(NULL))
+            .where(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_CHANNEL_ID]) +
+                   " == :value")
+            .bind("value",
+                  i_ChannelID)
+            .execute();
+    }
+    catch (std::exception& e)
+    {
+        Logger::Singleton().Log(Logger::ERROR, e.what(),
+                                "CommunicationMain.cpp", __LINE__);
+    }
+}
 
 //*************************************************************************************
 // Run
@@ -74,15 +153,24 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
                                                    c_Config.s_MySQLDatabase));
         }
         
-        // @TODO: Set Active in CLTable
-        
         WorkerPool c_WorkerPool(l_ThreadInfo,
                                 SERVER_CONNECTION,
                                 c_Config.i_MessagePulseMS);
         
+        // Create session to use for main thread update
+        Database c_Database(c_Config.s_MySQLAddress,
+                            c_Config.i_MySQLPort,
+                            c_Config.s_MySQLUser,
+                            c_Config.s_MySQLPassword,
+                            c_Config.s_MySQLDatabase);
+        
+        // Insert active state
+        SetIsActive(c_Database, c_Config.i_ChannelID, true);
+        
         // We can now start updating connections
         std::list<std::unique_ptr<NetConnection>> l_Connection;
         Timer c_Timer;
+        uint64_t u64_SetLastUpdate = 0;
         
         while (b_Run == true)
         {
@@ -123,29 +211,39 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
             {
                 std::this_thread::sleep_for(c_Timer.GetTimeRemaining());
             }
+            
+            // Set last update field?
+            u64_SetLastUpdate += c_Config.i_ConnectionPulseMS;
+            
+            if (u64_SetLastUpdate > COMMUNICATION_SERVER_SET_LAST_UPDATE_MS)
+            {
+                SetLastUpdate(c_Database, c_Config.i_ChannelID);
+                u64_SetLastUpdate = 0;
+            }
         }
         
         // Server end, shutdown
         c_NetServer.Stop();
         
-        // @TODO: Clear Connections for ChannelID (CDC) and is_Active = 0 (CL)
+        // Clean DB
+        SetIsActive(c_Database, c_Config.i_ChannelID, false);
     }
     catch (NetException& e)
     {
         c_Logger.Log(Logger::WARNING, e.what2() +
-                                      "(Connection Server)",
+                                      "(Communication Server)",
                      "CommunicationMain.cpp", __LINE__);
     }
     catch (ServerException& e)
     {
         c_Logger.Log(Logger::WARNING, e.what2() +
-                                      "(Connection Server)",
+                                      "(Communication Server)",
                      "CommunicationMain.cpp", __LINE__);
     }
     catch (std::exception& e)
     {
         c_Logger.Log(Logger::WARNING, std::string(e.what()) +
-                                      "(Connection Server)",
+                                      "(Communication Server)",
                      "CommunicationMain.cpp", __LINE__);
     }
 }

@@ -66,7 +66,7 @@ namespace
     
     const char* p_Parameter[PARAM_COUNT] =
     {
-        "", // Bin, given by os
+        "", // Bin, given by OS
         "-help",
         "-daemon",
         "-config"

@@ -68,7 +68,7 @@ ConnectionTask::ConnectionTask(std::unique_ptr<NetConnection>& p_Connection) : W
                                                                                s32_AuthAttempts(CONNECTION_TASK_MAX_AUTH_RETRY),
                                                                                u8_ClientType(ACTOR_TYPE_COUNT),
                                                                                s_Password(""),
-                                                                               s_UsedDeviceKey("")
+                                                                               s_DeviceKey("")
 {
     if (this->p_Connection == NULL || this->p_Connection->GetConnected() == false)
     {
@@ -204,9 +204,10 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
         return DecrementAuthAttempt();
     }
     
-    s_Mail = std::string(c_Request.p_Mail,
-                         c_Request.p_Mail + strnlen(c_Request.p_Mail, NetMessageV1::us_SizeAccountMail));
+    std::string s_Mail = std::string(c_Request.p_Mail,
+                                     c_Request.p_Mail + strnlen(c_Request.p_Mail, NetMessageV1::us_SizeAccountMail));
     std::string s_Base64Password("");
+    uint32_t u32_UserID;
     
     // Get data from table user_account first
     try
@@ -247,6 +248,8 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     }
     
     // Check what we recieved and grab important auth info
+    std::string s_Salt("");
+    
     if (s_Base64Password.size() == 0 ||
         ServerAuth::ExtractSalt(s_Base64Password, s_Salt) == false ||
         ServerAuth::ExtractPassword(s_Base64Password, s_Password) == false ||
@@ -262,7 +265,10 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
         return DecrementAuthAttempt();
     }
     
-    // Now grab user device list from table user_device_list
+    // Now grab user device list from table user_device_list and search device key
+    s_DeviceKey = std::string(c_Request.p_DeviceKey,
+                              c_Request.p_DeviceKey + strnlen(c_Request.p_DeviceKey, NetMessageV1::us_SizeDeviceKey));
+    
     try
     {
         RowResult c_Result = GetTable(p_Shared, p_UDLTableName)
@@ -274,10 +280,22 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
                                            std::to_string(u32_UserID))
                                      .execute();
         
+        size_t i = 0;
         size_t us_Count = c_Result.count();
-        for (size_t i = 0; i < us_Count; ++i)
+        
+        for (i = 0; i < us_Count; ++i)
         {
-            l_DeviceKey.emplace_back(c_Result.fetchOne()[1].get<std::string>());
+            if (c_Result.fetchOne()[1].get<std::string>().compare(s_DeviceKey) == 0)
+            {
+                break;
+            }
+        }
+        
+        // Not found, send error
+        if (i == us_Count)
+        {
+            SendAuthResult(NetMessage::ERR_SA_NO_DEVICE);
+            return DecrementAuthAttempt();
         }
     }
     catch (std::exception& e)
@@ -334,30 +352,6 @@ bool ConnectionTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noex
                                 "ConnectionTask.cpp", __LINE__);
         
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
-        return DecrementAuthAttempt();
-    }
-    
-    // Check for valid device key
-    std::string s_DeviceKey = std::string(c_Proof.p_DeviceKey,
-                                          c_Proof.p_DeviceKey + strnlen(c_Proof.p_DeviceKey, NetMessageV1::us_SizeDeviceKey));
-    bool b_Found = false;
-    
-    for (auto& DeviceKey : l_DeviceKey)
-    {
-        if (DeviceKey.compare(s_DeviceKey) == 0)
-        {
-            b_Found = true;
-            s_UsedDeviceKey = s_DeviceKey; // Remember for later
-            break;
-        }
-    }
-    
-    if (b_Found == false)
-    {
-        Logger::Singleton().Log(Logger::ERROR, "Device key not found for account (Connection)",
-                                "ConnectionTask.cpp", __LINE__);
-        
-        SendAuthResult(NetMessage::ERR_SA_NO_DEVICE);
         return DecrementAuthAttempt();
     }
     
@@ -425,7 +419,7 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                                             .where(std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
                                                    " == :value")
                                             .bind("value",
-                                                  s_UsedDeviceKey)
+                                                  s_DeviceKey)
                                             .execute();
             
             // Now get the channel address

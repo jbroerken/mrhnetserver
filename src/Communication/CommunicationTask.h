@@ -164,13 +164,8 @@ private:
     uint8_t u8_ClientType;
     
     // User Account Data
-    uint32_t u32_UserID;
-    std::string s_Mail;
     std::string s_Password;
-    std::string s_Salt;
-    
-    // User Device Table
-    std::list<std::string> l_DeviceKey;
+    std::string s_DeviceKey;
     
 protected:
     

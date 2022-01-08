@@ -72,7 +72,8 @@ CommunicationTask::CommunicationTask(std::unique_ptr<NetConnection>& p_Connectio
                                                                b_Authenticated(false),
                                                                s32_AuthAttempts(COMMUNICATION_TASK_MAX_AUTH_RETRY),
                                                                u8_ClientType(ACTOR_TYPE_COUNT),
-                                                               s_Password("")
+                                                               s_Password(""),
+                                                               s_DeviceKey("")
 {
     if (this->p_Connection == NULL || this->p_Connection->GetConnected() == false)
     {
@@ -100,6 +101,30 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
     {
         NetMessage c_Message(NetMessage::S_MSG_PARTNER_CLOSED);
         GiveMessage(c_Message);
+        
+        // Remove platform connection from table
+        if (u8_ClientType == CLIENT_PLATFORM && b_Authenticated == true)
+        {
+            try
+            {
+                GetTable(p_Shared, p_CDCTableName)
+                    .remove()
+                    .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
+                           " == :valueA AND" +
+                           std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
+                           " == :valueB")
+                    .bind("valueA",
+                          u32_ChannelID)
+                    .bind("valueB",
+                          s_DeviceKey)
+                    .execute();
+            }
+            catch (std::exception& e)
+            {
+                Logger::Singleton().Log(Logger::ERROR, std::string(e.what()) + " (Communication)",
+                                        "CommunicationTask.cpp", __LINE__);
+            }
+        }
         
         return false;
     }
@@ -353,9 +378,10 @@ bool CommunicationTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         return DecrementAuthAttempt();
     }
     
-    s_Mail = std::string(c_Request.p_Mail,
-                         c_Request.p_Mail + strnlen(c_Request.p_Mail, NetMessageV1::us_SizeAccountMail));
+    std::string s_Mail = std::string(c_Request.p_Mail,
+                                     c_Request.p_Mail + strnlen(c_Request.p_Mail, NetMessageV1::us_SizeAccountMail));
     std::string s_Base64Password("");
+    uint32_t u32_UserID;
     
     // Get data from table user_account first
     try
@@ -396,6 +422,8 @@ bool CommunicationTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
     }
     
     // Check what we recieved and grab important auth info
+    std::string s_Salt("");
+    
     if (s_Base64Password.size() == 0 ||
         ServerAuth::ExtractSalt(s_Base64Password, s_Salt) == false ||
         ServerAuth::ExtractPassword(s_Base64Password, s_Password) == false ||
@@ -412,6 +440,9 @@ bool CommunicationTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
     }
     
     // Now grab user device list from table user_device_list
+    s_DeviceKey = std::string(c_Request.p_DeviceKey,
+                              c_Request.p_DeviceKey + strnlen(c_Request.p_DeviceKey, NetMessageV1::us_SizeDeviceKey));
+    
     try
     {
         RowResult c_Result = GetTable(p_Shared, p_UDLTableName)
@@ -423,10 +454,22 @@ bool CommunicationTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                                            std::to_string(u32_UserID))
                                      .execute();
         
+        size_t i = 0;
         size_t us_Count = c_Result.count();
-        for (size_t i = 0; i < us_Count; ++i)
+        
+        for (i = 0; i < us_Count; ++i)
         {
-            l_DeviceKey.emplace_back(c_Result.fetchOne()[1].get<std::string>());
+            if (c_Result.fetchOne()[1].get<std::string>().compare(s_DeviceKey) == 0)
+            {
+                break;
+            }
+        }
+        
+        // Not found, send error
+        if (i == us_Count)
+        {
+            SendAuthResult(NetMessage::ERR_SA_NO_DEVICE);
+            return DecrementAuthAttempt();
         }
     }
     catch (std::exception& e)
@@ -486,47 +529,25 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
         return DecrementAuthAttempt();
     }
     
-    // Search for device key
-    std::string s_DeviceKey = std::string(c_Proof.p_DeviceKey,
-                                          c_Proof.p_DeviceKey + strnlen(c_Proof.p_DeviceKey, NetMessageV1::us_SizeDeviceKey));
-    bool b_Found = false;
-    
-    for (auto& DeviceKey : l_DeviceKey)
-    {
-        if (DeviceKey.compare(s_DeviceKey) == 0)
-        {
-            b_Found = true;
-            break;
-        }
-    }
-    
-    if (b_Found == false)
-    {
-        Logger::Singleton().Log(Logger::ERROR, "Device key not found for account (Communication)",
-                                "CommunicationTask.cpp", __LINE__);
-        
-        SendAuthResult(NetMessage::ERR_SA_NO_DEVICE);
-        return DecrementAuthAttempt();
-    }
-    
     // Now create message exchange for platform or grab for app client
     if (u8_ClientType == CLIENT_PLATFORM)
     {
         try
         {
             // Check if a platform connection for this device key already exists
-            RowResult c_CDCResult = GetTable(p_Shared, p_CDCTableName)
-                                            .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
-                                                    p_CDCFieldName[CDC_DEVICE_KEY])     /* 1 */
-                                            .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
-                                                   " == :valueA AND " +
-                                                   std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
-                                                   " == :valueB")
-                                            .bind("valueA",
-                                                  u32_ChannelID)
-                                            .bind("valueB",
-                                                  s_DeviceKey)
-                                            .execute();
+            Table c_CDCTable = GetTable(p_Shared, p_CDCTableName);
+            RowResult c_CDCResult = c_CDCTable
+                                        .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
+                                                p_CDCFieldName[CDC_DEVICE_KEY])     /* 1 */
+                                        .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
+                                               " == :valueA AND " +
+                                               std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
+                                               " == :valueB")
+                                        .bind("valueA",
+                                              u32_ChannelID)
+                                        .bind("valueB",
+                                              s_DeviceKey)
+                                        .execute();
             
             if (c_CDCResult.count() != 0)
             {
@@ -538,12 +559,12 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
             p_MessageExchange = c_ExchangeContainer.CreateExchange(s_DeviceKey);
             
             // Created, now commit to db that connection exists
-            GetTable(p_Shared, p_CDCTableName)
-                    .insert(p_CDCFieldName[CDC_CHANNEL_ID],
-                            p_CDCFieldName[CDC_DEVICE_KEY])
-                    .values(u32_ChannelID,
-                            s_DeviceKey)
-                    .execute();
+            c_CDCTable
+                .insert(p_CDCFieldName[CDC_CHANNEL_ID],
+                        p_CDCFieldName[CDC_DEVICE_KEY])
+                .values(u32_ChannelID,
+                        s_DeviceKey)
+                .execute();
             
             // @TODO: update assistant_connections field
         }

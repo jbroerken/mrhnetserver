@@ -62,6 +62,11 @@ template<> C_MSG_AUTH_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> con
            us_SizeAccountMail);
     us_Pos += us_SizeAccountMail;
     
+    memcpy(&(c_Data.p_DeviceKey[0]),
+           &(v_Buffer[us_Pos]),
+           us_SizeDeviceKey);
+    us_Pos += us_SizeDeviceKey;
+    
     c_Data.u8_Actor = v_Buffer[us_Pos];
     us_Pos += 1;
     
@@ -84,10 +89,6 @@ template<> C_MSG_AUTH_PROOF_DATA NetMessageV1::ToData(std::vector<uint8_t> const
            &(v_Buffer[us_Pos]),
            us_SizeNonceHash);
     us_Pos += us_SizeNonceHash;
-    
-    memcpy(&(c_Data.p_DeviceKey[0]),
-           &(v_Buffer[us_Pos]),
-           us_SizeDeviceKey);
     
     return c_Data;
 }
