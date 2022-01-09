@@ -157,6 +157,8 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     c_Settings.IsSet.ServerResumptionLevel = TRUE;
     c_Settings.PeerUnidiStreamCount = i_MaxClientCount * CLIENT_STREAMS_PER_DIRECTION * 2; // Connections * Connection Streams * To/From
     c_Settings.IsSet.PeerUnidiStreamCount = TRUE;
+    c_Settings.KeepAliveIntervalMs = c_Settings.IdleTimeoutMs / 2;
+    c_Settings.IsSet.KeepAliveIntervalMs = TRUE;
     //c_Settings.PeerBidiStreamCount = 1024;
     //c_Settings.IsSet.PeerBidiStreamCount = TRUE;
 
@@ -284,15 +286,13 @@ std::list<std::unique_ptr<NetConnection>> NetServer::GetConnections() noexcept
         {
             if (Connection->b_Shared == false)
             {
-                printf("\n(NetServer) Delete Context [ %p ]\n", Connection->p_Connection);
-                
                 // @NOTE: Already closed at this point
+                //printf("\n(NetServer) Delete Context [ %p ]\n", Connection->p_Connection);
                 delete Connection;
             }
             else
             {
-                printf("\n(NetServer) Shutdown Connection [ %p ]\n", Connection->p_Connection);
-                
+                //printf("\n(NetServer) Shutdown Connection [ %p ]\n", Connection->p_Connection);
                 Connection->b_Shared = false;
                 p_Context->p_APITable->ConnectionShutdown(Connection->p_Connection,
                                                           QUIC_CONNECTION_SHUTDOWN_FLAG_NONE,

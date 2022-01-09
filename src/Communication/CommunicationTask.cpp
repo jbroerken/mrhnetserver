@@ -110,12 +110,16 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                 GetTable(p_Shared, p_CDCTableName)
                     .remove()
                     .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
-                           " == :valueA AND" +
+                           " == :valueA AND " +
+                           std::string(p_CDCFieldName[CDC_USER_ID]) +
+                           " == :valueB AND " +
                            std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
-                           " == :valueB")
+                           " == :valueC")
                     .bind("valueA",
                           u32_ChannelID)
                     .bind("valueB",
+                          u32_UserID)
+                    .bind("valueC",
                           s_DeviceKey)
                     .execute();
             }
@@ -126,6 +130,14 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
             }
         }
         
+        Logger::Singleton().Log(Logger::INFO, "Disconnected: Device Key " +
+                                              s_DeviceKey +
+                                              ", User ID " +
+                                              std::to_string(u32_UserID) +
+                                              ", Client Type: " +
+                                              (u8_ClientType == CLIENT_PLATFORM ? "Platform" : "App") +
+                                              " (Communication)",
+                                "CommunicationTask.cpp", __LINE__);
         return false;
     }
     
@@ -144,15 +156,6 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                 /**
                  *  Message Version 1
                  */
-                    
-                // Availability
-                case NetMessage::C_MSG_HELLO:
-                    if (b_Authenticated == false)
-                    {
-                        // Kick connections which spam wrong stuff
-                        return false;
-                    }
-                    break;
                     
                 // Server Auth
                 case NetMessage::C_MSG_AUTH_REQUEST:
@@ -267,6 +270,12 @@ void CommunicationTask::ClearExchange() noexcept
 
 void CommunicationTask::GiveMessage(NetMessage& c_Message) noexcept
 {
+    // @NOTE: Can be NULL during auth (exchange not yet recieved)
+    if (p_MessageExchange == NULL)
+    {
+        return;
+    }
+    
     switch (u8_ClientType)
     {
         case CLIENT_PLATFORM:
@@ -289,6 +298,12 @@ void CommunicationTask::GiveMessage(NetMessage& c_Message) noexcept
 
 bool CommunicationTask::RetrieveMessage(NetMessage& c_Message) noexcept
 {
+    // @NOTE: Can be NULL during auth (exchange not yet recieved)
+    if (p_MessageExchange == NULL)
+    {
+        return false;
+    }
+    
     switch (u8_ClientType)
     {
         case CLIENT_PLATFORM:
@@ -381,7 +396,6 @@ bool CommunicationTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
     std::string s_Mail = std::string(c_Request.p_Mail,
                                      c_Request.p_Mail + strnlen(c_Request.p_Mail, NetMessageV1::us_SizeAccountMail));
     std::string s_Base64Password("");
-    uint32_t u32_UserID;
     
     // Get data from table user_account first
     try
@@ -538,14 +552,19 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
             Table c_CDCTable = GetTable(p_Shared, p_CDCTableName);
             RowResult c_CDCResult = c_CDCTable
                                         .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
-                                                p_CDCFieldName[CDC_DEVICE_KEY])     /* 1 */
+                                                p_CDCFieldName[CDC_USER_ID],        /* 1 */
+                                                p_CDCFieldName[CDC_DEVICE_KEY])     /* 2 */
                                         .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
                                                " == :valueA AND " +
+                                               std::string(p_CDCFieldName[CDC_USER_ID]) +
+                                               " == :valueB AND " +
                                                std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
-                                               " == :valueB")
+                                               " == :valueC")
                                         .bind("valueA",
                                               u32_ChannelID)
                                         .bind("valueB",
+                                              u32_UserID)
+                                        .bind("valueC",
                                               s_DeviceKey)
                                         .execute();
             
@@ -561,16 +580,18 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
             // Created, now commit to db that connection exists
             c_CDCTable
                 .insert(p_CDCFieldName[CDC_CHANNEL_ID],
+                        p_CDCFieldName[CDC_USER_ID],
                         p_CDCFieldName[CDC_DEVICE_KEY])
                 .values(u32_ChannelID,
+                        u32_UserID,
                         s_DeviceKey)
                 .execute();
             
             // @TODO: update assistant_connections field
         }
-        catch (ServerException& e)
+        catch (std::exception& e)
         {
-            Logger::Singleton().Log(Logger::ERROR, e.what2() + " (Communication)",
+            Logger::Singleton().Log(Logger::ERROR, std::string(e.what()) + " (Communication)",
                                     "CommunicationTask.cpp", __LINE__);
             
             c_ExchangeContainer.RemoveExchange(s_DeviceKey); // Remove again for safety
@@ -612,6 +633,15 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
     
     // We are authenticated
     b_Authenticated = true;
+    
+    Logger::Singleton().Log(Logger::INFO, "Connected: Device Key " +
+                                          s_DeviceKey +
+                                          ", User ID " +
+                                          std::to_string(u32_UserID) +
+                                          ", Client Type: " +
+                                          (u8_ClientType == CLIENT_PLATFORM ? "Platform" : "App") +
+                                          " (Communication)",
+                            "CommunicationTask.cpp", __LINE__);
     
     // Send result
     SendAuthResult(NetMessage::ERR_NONE);

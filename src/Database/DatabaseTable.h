@@ -148,8 +148,7 @@ namespace DatabaseTable
         CL_ADDRESS = 2,
         CL_PORT = 3,
         CL_ASSISTANT_CONNECTIONS = 4,
-        CL_IS_ACTIVE = 5,
-        CL_LAST_UPDATE = 6,
+        CL_LAST_UPDATE = 5,
         
         CL_FIELDS_MAX = CL_LAST_UPDATE,
         CL_FIELDS_COUNT = CL_FIELDS_MAX + 1
@@ -162,7 +161,6 @@ namespace DatabaseTable
         "address",
         "port",
         "assistant_connections",
-        "is_active",
         "last_update_s"
     };
     
@@ -204,7 +202,7 @@ namespace DatabaseTable
     enum CDCFields
     {
         CDC_CHANNEL_ID = 0,
-        CDC_USER_UD = 1,
+        CDC_USER_ID = 1,
         CDC_DEVICE_KEY = 2,
         
         CDC_FIELDS_MAX = CDC_DEVICE_KEY,

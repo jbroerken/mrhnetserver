@@ -54,16 +54,15 @@ DROP TABLE IF EXISTS `channel_list`;
 
 CREATE TABLE `channel_list` 
 (
-    `channel_id` int unsigned NOT NULL COMMENT 'Channel list identifier',
+    `channel_id` int unsigned NOT NULL COMMENT 'Channel identifier',
     `name` varchar(64) NOT NULL DEFAULT '' COMMENT 'Channel identification name',
     `address` varchar(256) NOT NULL DEFAULT '127.0.0.1' COMMENT 'Channel network address',
     `port` int NOT NULL DEFAULT '-1' COMMENT 'Channel network port',
     `assistant_connections` int unsigned NOT NULL DEFAULT '0' COMMENT 'Channel assistant connection count',
-    `is_active` int unsigned NOT NULL DEFAULT '0' COMMENT 'Channel run flag',
-    `last_update_s` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'UTC channel time stamp',
+    `last_update_s` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'Channel update time stamp',
     PRIMARY KEY (`channel_id`)
 ) 
-DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Active channels for the given channel types';
+DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Known channels for communication';
 
 
 --

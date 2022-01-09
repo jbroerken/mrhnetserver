@@ -37,8 +37,10 @@
 #include "./Revision.h"
 
 // Pre-defined
+#define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/Users/Jens/Desktop/BA_Source/NetServer/mrhnetserver_speech.conf"
+
 #ifndef MRH_SRV_DEFAULT_CONFIG_FILE_PATH
-    #define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/Users/Jens/Desktop/BA_Source/NetServer/mrhnetserver.conf"//"/usr/local/etc/mrhnetserver.conf"
+    #define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/usr/local/etc/mrhnetserver.conf"
 #endif
 
 
@@ -252,27 +254,31 @@ int main(int argc, const char* argv[])
         return EXIT_FAILURE;
     }
     
-    // Run as daemon or start cli thread
-    if (b_Daemon == true)
-    {
-        Daemonize();
-    }
-    else
-    {
-        CLI::Run();
-    }
-    
     // Start server
     try
     {
         Configuration c_Config(s_ConfigPath);
         
+        // Run as daemon or start cli thread
+        if (b_Daemon == true)
+        {
+            Daemonize();
+        }
+        else
+        {
+            CLI::Start(c_Config);
+        }
+        
         switch (c_Config.e_Type)
         {
             case SERVER_CONNECTION:
+                c_Logger.Log(Logger::INFO, "Running as connection server.",
+                             "Main.cpp", __LINE__);
                 ConnectionMain::Run(c_Config, b_Run);
                 break;
             case SERVER_COMMUNICATION:
+                c_Logger.Log(Logger::INFO, "Running as communication server.",
+                             "Main.cpp", __LINE__);
                 CommunicationMain::Run(c_Config, b_Run);
                 break;
                 
@@ -284,10 +290,17 @@ int main(int argc, const char* argv[])
     }
     catch (std::exception& e)
     {
-        printf("%s\n", e.what());
+        c_Logger.Log(Logger::ERROR, "Failed to run server: " +
+                                    std::string(e.what()),
+                     "Main.cpp", __LINE__);
     }
     
     // Clean up
+    if (b_Daemon == false)
+    {
+        CLI::Stop();
+    }
+    
     c_Logger.Log(Logger::INFO, "Server shutdown.",
                  "Main.cpp", __LINE__);
     return EXIT_SUCCESS;

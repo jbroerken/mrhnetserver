@@ -88,6 +88,14 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
     // Connection went away?
     if (p_Connection->GetConnected() == false)
     {
+        Logger::Singleton().Log(Logger::INFO, "Disconnected: Device Key " +
+                                              s_DeviceKey +
+                                              ", User ID " +
+                                              std::to_string(u32_UserID) +
+                                              ", Client Type: " +
+                                              (u8_ClientType == CLIENT_PLATFORM ? "Platform" : "App") +
+                                              " (Connection)",
+                                "ConnectionTask.cpp", __LINE__);
         return false;
     }
     
@@ -101,14 +109,6 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
             /**
              *  Message Version 1
              */
-                
-            // Availability
-            case NetMessage::C_MSG_HELLO:
-                if (b_Authenticated == false)
-                {
-                    return false;
-                }
-                break;
                 
             // Server Auth
             case NetMessage::C_MSG_AUTH_REQUEST:
@@ -207,7 +207,6 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     std::string s_Mail = std::string(c_Request.p_Mail,
                                      c_Request.p_Mail + strnlen(c_Request.p_Mail, NetMessageV1::us_SizeAccountMail));
     std::string s_Base64Password("");
-    uint32_t u32_UserID;
     
     // Get data from table user_account first
     try
@@ -358,6 +357,15 @@ bool ConnectionTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noex
     // We are authenticated
     b_Authenticated = true;
     
+    Logger::Singleton().Log(Logger::INFO, "Connected: Device Key " +
+                                          s_DeviceKey +
+                                          ", User ID " +
+                                          std::to_string(u32_UserID) +
+                                          ", Client Type: " +
+                                          (u8_ClientType == CLIENT_PLATFORM ? "Platform" : "App") +
+                                          " (Connection)",
+                            "ConnectionTask.cpp", __LINE__);
+    
     // Now create the message to send
     SendAuthResult(NetMessage::ERR_NONE);
     return true;
@@ -415,10 +423,15 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             // This also shows us where the connection is held
             RowResult c_CDCResult = GetTable(p_Shared, p_CDCTableName)
                                             .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
-                                                    p_CDCFieldName[CDC_DEVICE_KEY])     /* 1 */
-                                            .where(std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
-                                                   " == :value")
-                                            .bind("value",
+                                                    p_CDCFieldName[CDC_USER_ID],        /* 1 */
+                                                    p_CDCFieldName[CDC_DEVICE_KEY])     /* 2 */
+                                            .where(std::string(p_CDCFieldName[CDC_USER_ID]) +
+                                                   " == :valueA AND " +
+                                                   std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
+                                                   " == :valueB")
+                                            .bind("valueA",
+                                                  u32_UserID)
+                                            .bind("valueB",
                                                   s_DeviceKey)
                                             .execute();
             
@@ -440,14 +453,11 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                                                        p_CLFieldName[CL_NAME],         /* 1 */
                                                        p_CLFieldName[CL_ADDRESS],      /* 2 */
                                                        p_CLFieldName[CL_PORT],         /* 3 */
-                                                       p_CLFieldName[CL_IS_ACTIVE],    /* 4 */
-                                                       p_CLFieldName[CL_LAST_UPDATE])  /* 5 */
+                                                       p_CLFieldName[CL_LAST_UPDATE])  /* 4 */
                                                .where(std::string(p_CLFieldName[CL_CHANNEL_ID]) +
                                                       " == :valueA AND " +
                                                       std::string(p_CLFieldName[CL_NAME]) +
-                                                      " == :valueB AND " +
-                                                      std::string(p_CLFieldName[CL_IS_ACTIVE]) +
-                                                      " == 1")
+                                                      " == :valueB")
                                                .bind("valueA",
                                                      c_CDCResult.fetchOne()[0].get<uint32_t>())
                                                .bind("valueB",
@@ -464,9 +474,6 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                 
                 // Now check the last update
                 uint64_t u64_RowUpdate = c_Row[4].get<uint64_t>();
-                
-                // TEST
-                //u64_RowUpdate = (uint64_t) - 1;
                 
                 if (u64_RowUpdate < u64_LastUpdate || u64_RowUpdate < u64_MaxTimeDiff)
                 {
@@ -506,12 +513,9 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                                                  p_CLFieldName[CL_ADDRESS],                 /* 2 */
                                                  p_CLFieldName[CL_PORT],                    /* 3 */
                                                  p_CLFieldName[CL_ASSISTANT_CONNECTIONS],   /* 4 */
-                                                 p_CLFieldName[CL_IS_ACTIVE],               /* 5 */
-                                                 p_CLFieldName[CL_LAST_UPDATE])             /* 6 */
+                                                 p_CLFieldName[CL_LAST_UPDATE])             /* 5 */
                                          .where(std::string(p_CLFieldName[CL_NAME]) +
-                                                " == :value AND " +
-                                                std::string(p_CLFieldName[CL_IS_ACTIVE]) +
-                                                " == 1")
+                                                " == :value")
                                          .bind("value",
                                                s_ChannelName)
                                          .execute();
@@ -533,11 +537,8 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                 Row c_Row = c_Result.fetchOne();
                 
                 // We need to check update time and connections
-                uint64_t u64_RowUpdate = c_Row[6].get<uint64_t>();
+                uint64_t u64_RowUpdate = c_Row[5].get<uint64_t>();
                 uint32_t u32_RowConnections = c_Row[4].get<uint32_t>();
-                
-                // TEST
-                //u64_RowUpdate = (uint64_t) - 1;
                 
                 if (u64_RowUpdate < u64_MaxTimeDiff)
                 {

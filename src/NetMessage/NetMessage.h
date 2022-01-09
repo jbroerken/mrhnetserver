@@ -65,18 +65,17 @@ public:
         CS_MSG_UNK = 0,                     // All - Unknown / Error
         
         // Availability
-        C_MSG_HELLO = 1,                    // Client - Client still valid (Process ok, etc)
-        S_MSG_PARTNER_CLOSED = 2,           // Server - A client closed connection (for other clients, etc.)
+        S_MSG_PARTNER_CLOSED = 1,           // Server - A client closed connection (for other clients, etc.)
         
         // Server Auth
-        C_MSG_AUTH_REQUEST = 3,             // Client - Request authentication
-        S_MSG_AUTH_CHALLENGE = 4,           // Server - Challenge client to provide auth data
-        C_MSG_AUTH_PROOF = 5,               // Client - Provide proof of valid auth data
-        S_MSG_AUTH_RESULT = 6,              // Server - Proof check result
+        C_MSG_AUTH_REQUEST = 2,             // Client - Request authentication
+        S_MSG_AUTH_CHALLENGE = 3,           // Server - Challenge client to provide auth data
+        C_MSG_AUTH_PROOF = 4,               // Client - Provide proof of valid auth data
+        S_MSG_AUTH_RESULT = 5,              // Server - Proof check result
         
         // Device Pairing
-        C_MSG_PAIR_REQUEST = 7,             // Client - Request pairing with platform client
-        C_MSG_PAIR_CHALLENGE,               // Client - Give nonce to app client to hash
+        C_MSG_PAIR_REQUEST = 6,             // Client - Request pairing with platform client
+        C_MSG_PAIR_CHALLENGE = 7,           // Client - Give nonce to app client to hash
         C_MSG_PAIR_PROOF,                   // Client - Return the hashed nonce to platform client
         C_MSG_PAIR_RESULT,                  // Client - Result of pairing with platform client
         

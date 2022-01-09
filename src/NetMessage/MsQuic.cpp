@@ -71,7 +71,7 @@ QUIC_STATUS QUIC_API MsQuicListenerCallback(_In_ HQUIC Listener, _In_opt_ void* 
                 p_Listener->i_CurClientCount += 1;
                 
                 int i_NewClientCount = p_Listener->i_CurClientCount;
-                printf("\n(MsQuicListenerCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
+                //printf("\n(MsQuicListenerCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
             }
             catch (...)
             {
@@ -124,7 +124,7 @@ QUIC_STATUS QUIC_API MsQuicConnectionCallback(_In_ HQUIC Connection, _In_opt_ vo
             p_Context->i_CurClientCount -= 1;
             
             int i_NewClientCount = p_Context->i_CurClientCount;
-            printf("\n(MsQuicConnectionCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
+            //printf("\n(MsQuicConnectionCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
             
             // Close if not already closed
             if (p_Context->p_Connection != NULL)
@@ -136,14 +136,12 @@ QUIC_STATUS QUIC_API MsQuicConnectionCallback(_In_ HQUIC Connection, _In_opt_ vo
             // No longer owned by anyone?
             if (p_Context->b_Shared == false)
             {
-                printf("\n(MsQuicConnectionCallback) Delete Context [ %p ]\n", Connection);
-                
+                //printf("\n(MsQuicConnectionCallback) Delete Context [ %p ]\n", Connection);
                 delete p_Context;
             }
             else
             {
-                printf("\n(MsQuicConnectionCallback) Shutdown Connection [ %p ]\n", Connection);
-                
+                //printf("\n(MsQuicConnectionCallback) Shutdown Connection [ %p ]\n", Connection);
                 p_Context->b_Shared = false; // Signal deletion OK
             }
             break;

@@ -39,15 +39,13 @@ NetConnection::~NetConnection() noexcept
 {
     if (p_Context->b_Shared == false)
     {
-        printf("\n(NetConnection) Delete Context [ %p ]\n", p_Context->p_Connection);
-        
         // @NOTE: Already closed at this point
+        //printf("\n(NetConnection) Delete Context [ %p ]\n", p_Context->p_Connection);
         delete p_Context;
     }
     else
     {
-        printf("\n(NetConnection) Shutdown Connection [ %p ]\n", p_Context->p_Connection);
-        
+        //printf("\n(NetConnection) Shutdown Connection [ %p ]\n", p_Context->p_Connection);
         p_Context->b_Shared = false;
         p_Context->p_APITable->ConnectionShutdown(p_Context->p_Connection,
                                                   QUIC_CONNECTION_SHUTDOWN_FLAG_NONE,

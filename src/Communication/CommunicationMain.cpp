@@ -41,31 +41,13 @@
 // Channel List
 //*************************************************************************************
 
-static void SetIsActive(Database& c_Database, int i_ChannelID, bool b_IsActive)
+static void ClearConnections(Database& c_Database, int i_ChannelID)
 {
     try
     {
-        mysqlx::Schema c_Schema = c_Database
-                                    .c_Session
-                                    .getSchema(c_Database.s_Database);
-        
-        c_Schema
-            .getTable(DatabaseTable::p_CLTableName)
-            .update()
-            .set(DatabaseTable::p_CLFieldName[DatabaseTable::CL_IS_ACTIVE],
-                 (b_IsActive ? 1 : 0))
-            .where(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_CHANNEL_ID]) +
-                   " == :value")
-            .bind("value",
-                  i_ChannelID)
-            .execute();
-        
-        if (b_IsActive == true)
-        {
-            return;
-        }
-        
-        c_Schema
+        c_Database
+            .c_Session
+            .getSchema(c_Database.s_Database)
             .getTable(DatabaseTable::p_CDCTableName)
             .remove()
             .where(std::string(DatabaseTable::p_CDCFieldName[DatabaseTable::CDC_CHANNEL_ID]) +
@@ -76,15 +58,8 @@ static void SetIsActive(Database& c_Database, int i_ChannelID, bool b_IsActive)
     }
     catch (std::exception& e)
     {
-        if (b_IsActive == false)
-        {
-            Logger::Singleton().Log(Logger::ERROR, e.what(),
-                                    "CommunicationMain.cpp", __LINE__);
-        }
-        else
-        {
-            throw ServerException("Failed to set active: " + std::string(e.what()), SERVER_COMMUNICATION);
-        }
+        Logger::Singleton().Log(Logger::ERROR, e.what(),
+                                "CommunicationMain.cpp", __LINE__);
     }
 }
 
@@ -95,7 +70,7 @@ static void SetLastUpdate(Database& c_Database, int i_ChannelID) noexcept
         c_Database
             .c_Session
             .getSchema(c_Database.s_Database)
-            .getTable(c_Database.s_Database)
+            .getTable(DatabaseTable::p_CLTableName)
             .update()
             .set(DatabaseTable::p_CLFieldName[DatabaseTable::CL_LAST_UPDATE],
                  time(NULL))
@@ -165,7 +140,8 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
                             c_Config.s_MySQLDatabase);
         
         // Insert active state
-        SetIsActive(c_Database, c_Config.i_ChannelID, true);
+        ClearConnections(c_Database, c_Config.i_ChannelID);
+        SetLastUpdate(c_Database, c_Config.i_ChannelID);
         
         // We can now start updating connections
         std::list<std::unique_ptr<NetConnection>> l_Connection;
@@ -224,9 +200,6 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
         
         // Server end, shutdown
         c_NetServer.Stop();
-        
-        // Clean DB
-        SetIsActive(c_Database, c_Config.i_ChannelID, false);
     }
     catch (NetException& e)
     {

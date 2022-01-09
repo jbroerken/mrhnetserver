@@ -28,6 +28,7 @@
 // External
 
 // Project
+#include "./Configuration.h"
 
 
 namespace CLI
@@ -37,10 +38,18 @@ namespace CLI
     //*************************************************************************************
     
     /**
-     *  Run a CLI loop, allowing for input.
+     *  Start a CLI loop, allowing for input.
+     *
+     *  \param c_Configuration The server configuration to use.
      */
     
-    void Run() noexcept;
+    void Start(Configuration& c_Configuration) noexcept;
+    
+    /**
+     *  Stop a CLI loop.
+     */
+    
+    void Stop() noexcept;
 };
 
 #endif /* CLI_h */
