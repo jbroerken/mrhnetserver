@@ -92,3 +92,15 @@ NetMessage::NetMessageList NetMessage::GetID() const noexcept
     
     return static_cast<NetMessageList>(v_Data[us_IDPos]);
 }
+
+bool NetMessage::GetEncrypted() const noexcept
+{
+    // @NOTE: Net messages are always a 1024 byte buffer,
+    //        encryption always increases that size
+    if (v_Data.size() > NetMessage::us_BufferSize)
+    {
+        return true;
+    }
+    
+    return false;
+}

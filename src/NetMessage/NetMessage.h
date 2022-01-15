@@ -180,10 +180,18 @@ public:
     /**
      *  Get the net message id.
      *
-     *  \returns The net message id.
+     *  \return The net message id.
      */
     
     NetMessageList GetID() const noexcept;
+    
+    /**
+     *  Check if the net message is encrypted.
+     *
+     *  \return true if encrypted, false if not.
+     */
+    
+    bool GetEncrypted() const noexcept;
     
     //*************************************************************************************
     // Data

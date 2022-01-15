@@ -40,6 +40,9 @@
 #ifndef CONNECTION_TASK_MAX_UPDATE_DIFF_S
     #define CONNECTION_TASK_MAX_UPDATE_DIFF_S 300
 #endif
+#ifndef CONNECTION_TASK_EXTENDED_LOGGING
+    #define CONNECTION_TASK_EXTENDED_LOGGING 1//0
+#endif
 
 using namespace NetMessageV1;
 using namespace DatabaseTable;
@@ -88,14 +91,7 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
     // Connection went away?
     if (p_Connection->GetConnected() == false)
     {
-        Logger::Singleton().Log(Logger::INFO, "Disconnected: Device Key " +
-                                              s_DeviceKey +
-                                              ", User ID " +
-                                              std::to_string(u32_UserID) +
-                                              ", Client Type: " +
-                                              (u8_ClientType == CLIENT_PLATFORM ? "Platform" : "App") +
-                                              " (Connection)",
-                                "ConnectionTask.cpp", __LINE__);
+        LogClientEvent("Disconnected (Connection lost).", __LINE__);
         return false;
     }
     
@@ -104,6 +100,15 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
     
     while (i_Recieved < CONNECTION_TASK_MAX_MESSAGE_PER_LOOP && p_Connection->Recieve(c_Message) == true)
     {
+        // Encrypted?
+        if (c_Message.GetEncrypted() == true)
+        {
+            // Connection server does not accept e2e encrypted messages!
+            LogClientEvent("Disconnected (Sent encrypted message to connection server).", __LINE__);
+            return false;
+        }
+        
+        // Server-readable
         switch (c_Message.GetID())
         {
             /**
@@ -115,12 +120,14 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
                 if (AuthRequest(p_Shared, ToData<C_MSG_AUTH_REQUEST_DATA>(c_Message.v_Data)) == false)
                 {
                     // Auth fail, kick
+                    LogClientEvent("Disconnected (Failed to authenticate).", __LINE__);
                     return false;
                 }
                 break;
             case NetMessage::C_MSG_AUTH_PROOF:
                 if (AuthProof(ToData<C_MSG_AUTH_PROOF_DATA>(c_Message.v_Data)) == false)
                 {
+                    LogClientEvent("Disconnected (Failed to authenticate).", __LINE__);
                     return false;
                 }
                 break;
@@ -129,6 +136,7 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
             case NetMessage::C_MSG_CHANNEL_REQUEST:
                 if (ChannelRequest(p_Shared, ToData<C_MSG_CHANNEL_REQUEST_DATA>(c_Message.v_Data)) == false)
                 {
+                    LogClientEvent("Disconnected (Sent invalid message while not authenticated).", __LINE__);
                     return false;
                 }
                 break;
@@ -140,6 +148,7 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
             default:
                 if (b_Authenticated == false)
                 {
+                    LogClientEvent("Disconnected (Sent invalid message while not authenticated).", __LINE__);
                     return false;
                 }
                 break;
@@ -149,6 +158,19 @@ bool ConnectionTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
     }
     
     return true;
+}
+
+void ConnectionTask::LogClientEvent(std::string const& s_Event, int i_Line) noexcept
+{
+    Logger::Singleton().Log(Logger::INFO, "[ Device Key " +
+                                          s_DeviceKey +
+                                          ", User ID " +
+                                          std::to_string(u32_UserID) +
+                                          ", Client Type: " +
+                                          (u8_ClientType == CLIENT_PLATFORM ? "Platform" : "App") +
+                                          " ]: " +
+                                          s_Event,
+                            "ConnectionTask.cpp", i_Line);
 }
 
 //*************************************************************************************
@@ -195,11 +217,21 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     // Version and type valid?
     if (u8_ClientType != CLIENT_APP && u8_ClientType != CLIENT_PLATFORM)
     {
+        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+        {
+            LogClientEvent("Authentication failed: Invalid client type.", __LINE__);
+        }
+        
         SendAuthResult(NetMessage::ERR_SA_UNK_ACTOR);
         return DecrementAuthAttempt();
     }
     else if (c_Request.u8_Version != NetMessage::u8_NetMessageVersion)
     {
+        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+        {
+            LogClientEvent("Authentication failed: Invalid net message version.", __LINE__);
+        }
+        
         SendAuthResult(NetMessage::ERR_SA_VERSION);
         return DecrementAuthAttempt();
     }
@@ -230,8 +262,10 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
         }
         else
         {
-            Logger::Singleton().Log(Logger::ERROR, "Invalid results for account mail address (Connection)",
-                                    "ConnectionTask.cpp", __LINE__);
+            if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+            {
+                LogClientEvent("Authentication failed: Invalid results for given account mail address.", __LINE__);
+            }
             
             SendAuthResult(NetMessage::ERR_SG_ERROR);
             return DecrementAuthAttempt();
@@ -239,9 +273,10 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     }
     catch (std::exception& e)
     {
-        Logger::Singleton().Log(Logger::ERROR, std::string(e.what()) + " (Connection)",
-                                "ConnectionTask.cpp", __LINE__);
-        
+        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+        {
+            LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+        }
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
@@ -255,8 +290,10 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
         s_Salt.size() > us_SizeAccountPasswordSalt ||
         s_Password.size() > us_SizeAccountPassword)
     {
-        Logger::Singleton().Log(Logger::ERROR, "Failed to get account password hash (Connection)",
-                                "ConnectionTask.cpp", __LINE__);
+        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+        {
+            LogClientEvent("Authentication failed: Failed to get account password hash and salt.", __LINE__);
+        }
         
         s_Password = std::string(""); // Reset for auth proof check
         
@@ -299,11 +336,12 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     }
     catch (std::exception& e)
     {
-        Logger::Singleton().Log(Logger::ERROR, std::string(e.what()) + " (Connection)",
-                                "ConnectionTask.cpp", __LINE__);
-        
         s_Password = std::string("");
         
+        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+        {
+            LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+        }
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
@@ -347,24 +385,18 @@ bool ConnectionTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noex
     //        point! The size call always returns 0.
     if (s_Password.size() == 0 || ServerAuth::CompareNonce(u32_Nonce, c_Proof.p_NonceHash, s_Password.data()) == false)
     {
-        Logger::Singleton().Log(Logger::ERROR, "Account encrypted nonce mismatch (Connection)",
-                                "ConnectionTask.cpp", __LINE__);
+        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+        {
+            LogClientEvent("Authentication failed: Account encrypted nonce mismatch.", __LINE__);
+        }
         
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
     
     // We are authenticated
+    LogClientEvent("Connected (Authentication successfull).", __LINE__);
     b_Authenticated = true;
-    
-    Logger::Singleton().Log(Logger::INFO, "Connected: Device Key " +
-                                          s_DeviceKey +
-                                          ", User ID " +
-                                          std::to_string(u32_UserID) +
-                                          ", Client Type: " +
-                                          (u8_ClientType == CLIENT_PLATFORM ? "Platform" : "App") +
-                                          " (Connection)",
-                            "ConnectionTask.cpp", __LINE__);
     
     // Now create the message to send
     SendAuthResult(NetMessage::ERR_NONE);
@@ -500,9 +532,10 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         }
         catch (std::exception& e)
         {
-            Logger::Singleton().Log(Logger::ERROR, std::string(e.what()) + " (Connection)",
-                                    "ConnectionTask.cpp", __LINE__);
-            
+            if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+            {
+                LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+            }
             SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_CR_NO_CHANNEL);
             return true;
         }
@@ -565,9 +598,10 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         }
         catch (std::exception& e)
         {
-            Logger::Singleton().Log(Logger::ERROR, std::string(e.what()) + " (Connection)",
-                                    "ConnectionTask.cpp", __LINE__);
-            
+            if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
+            {
+                LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+            }
             SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_CR_NO_CHANNEL);
             return true;
         }

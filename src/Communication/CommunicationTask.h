@@ -76,6 +76,19 @@ public:
 private:
     
     //*************************************************************************************
+    // Perform
+    //*************************************************************************************
+    
+    /**
+     *  Log a event for a client.
+     *
+     *  \param s_Event The event which occured for the client.
+     *  \param i_Line The code line where the event occured.
+     */
+    
+    inline void LogClientEvent(std::string const& s_Event, int i_Line) noexcept;
+    
+    //*************************************************************************************
     // Message Exchange
     //*************************************************************************************
     

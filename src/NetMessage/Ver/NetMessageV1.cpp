@@ -49,7 +49,7 @@ using namespace NetMessageV1;
 
 template<> C_MSG_AUTH_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
 {
-    if (v_Buffer.size() != NetMessage::us_BufferSize)
+    if (v_Buffer.size() < NetMessage::us_BufferSize)
     {
         throw NetException("Invalid data buffer!");
     }
@@ -77,7 +77,7 @@ template<> C_MSG_AUTH_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> con
 
 template<> C_MSG_AUTH_PROOF_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
 {
-    if (v_Buffer.size() != NetMessage::us_BufferSize)
+    if (v_Buffer.size() < NetMessage::us_BufferSize)
     {
         throw NetException("Invalid data buffer!");
     }
@@ -95,7 +95,7 @@ template<> C_MSG_AUTH_PROOF_DATA NetMessageV1::ToData(std::vector<uint8_t> const
 
 template<> C_MSG_CHANNEL_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
 {
-    if (v_Buffer.size() != NetMessage::us_BufferSize)
+    if (v_Buffer.size() < NetMessage::us_BufferSize)
     {
         throw NetException("Invalid data buffer!");
     }
