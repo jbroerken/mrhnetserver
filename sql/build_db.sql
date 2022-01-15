@@ -25,7 +25,7 @@ CREATE TABLE `user_account`
 (
     `user_id` int unsigned NOT NULL UNIQUE AUTO_INCREMENT COMMENT 'Unique user identification',
     `mail_address` varchar(128) NOT NULL DEFAULT '' COMMENT 'User account mail address',
-    `password` varchar(255) NOT NULL DEFAULT '' COMMENT 'User account password hash',
+    `password` varchar(256) NOT NULL DEFAULT '' COMMENT 'User account password hash',
     PRIMARY KEY (`user_id`)
 ) 
 DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='User accounts for server authentication';
@@ -75,7 +75,7 @@ CREATE TABLE `channel_device_connections`
 (
     `channel_id` int unsigned NOT NULL COMMENT 'Channel list identifier',
     `user_id` int unsigned NOT NULL COMMENT 'User Account identifier',
-    `device_key` varchar(255) NOT NULL DEFAULT '' COMMENT 'Connection device key',
+    `device_key` varchar(25) NOT NULL DEFAULT '' COMMENT 'Connection device key',
     FOREIGN KEY (`channel_id`) REFERENCES channel_list(`channel_id`),
     FOREIGN KEY (`user_id`) REFERENCES user_account(`user_id`)
 ) 

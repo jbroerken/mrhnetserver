@@ -102,7 +102,7 @@ static void CreateAccount(std::string const& s_Mail, std::string const& s_Passwo
                       crypto_secretbox_KEYBYTES,
                       p_Salt,
                       crypto_pwhash_OPSLIMIT_INTERACTIVE,
-                      crypto_pwhash_argon2id_MEMLIMIT_SENSITIVE,
+                      128 * 1024 * 1024,//crypto_pwhash_argon2id_MEMLIMIT_SENSITIVE,
                       crypto_pwhash_ALG_ARGON2ID13) != 0)
     {
         Logger::Singleton().Log(Logger::ERROR, "Failed to hash password",

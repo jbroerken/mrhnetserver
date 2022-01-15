@@ -210,34 +210,42 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
         //        discarded!
         if (RetrieveMessage(c_Message) == true && b_Authenticated == true)
         {
-            switch (c_Message.GetID())
+            try
             {
-                case NetMessage::S_MSG_PARTNER_CLOSED:
+                switch (c_Message.GetID())
                 {
-                    p_Connection->Send(c_Message);
-                    
-                    // Kick clients other than platform which waits for partners
-                    if (u8_ClientType == CLIENT_PLATFORM)
+                    case NetMessage::S_MSG_PARTNER_CLOSED:
                     {
-                        // Clear and return exchange for later app client
-                        ClearExchange();
-                        c_ExchangeContainer.AddExchange(p_MessageExchange);
+                        p_Connection->Send(c_Message);
                         
+                        // Kick clients other than platform which waits for partners
+                        if (u8_ClientType == CLIENT_PLATFORM)
+                        {
+                            // Clear and return exchange for later app client
+                            ClearExchange();
+                            c_ExchangeContainer.AddExchange(p_MessageExchange);
+                            
+                            b_Processed = true;
+                            break;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                        
+                    default:
+                    {
+                        p_Connection->Send(c_Message);
                         b_Processed = true;
                         break;
                     }
-                    else
-                    {
-                        return false;
-                    }
                 }
-                    
-                default:
-                {
-                    p_Connection->Send(c_Message);
-                    b_Processed = true;
-                    break;
-                }
+            }
+            catch (NetException& e)
+            {
+                Logger::Singleton().Log(Logger::ERROR, "Failed to perform message exchange: " + e.what2(),
+                                        "CommunicationTask.cpp", __LINE__);
             }
         }
         
@@ -253,15 +261,6 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
     }
     
     return true;
-}
-
-void CommunicationTask::ClearExchange() noexcept
-{
-    std::lock_guard<std::mutex> c_APGuard(p_MessageExchange->c_APMutex);
-    p_MessageExchange->l_APMessage.clear();
-    
-    std::lock_guard<std::mutex> c_PAGuard(p_MessageExchange->c_PAMutex);
-    p_MessageExchange->l_PAMessage.clear();
 }
 
 //*************************************************************************************
@@ -338,6 +337,15 @@ bool CommunicationTask::RetrieveMessage(NetMessage& c_Message) noexcept
             
         default: { return false; }
     }
+}
+
+void CommunicationTask::ClearExchange() noexcept
+{
+    std::lock_guard<std::mutex> c_APGuard(p_MessageExchange->c_APMutex);
+    p_MessageExchange->l_APMessage.clear();
+    
+    std::lock_guard<std::mutex> c_PAGuard(p_MessageExchange->c_PAMutex);
+    p_MessageExchange->l_PAMessage.clear();
 }
 
 //*************************************************************************************
@@ -471,7 +479,7 @@ bool CommunicationTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         size_t i = 0;
         size_t us_Count = c_Result.count();
         
-        for (i = 0; i < us_Count; ++i)
+        for (; i < us_Count; ++i)
         {
             if (c_Result.fetchOne()[1].get<std::string>().compare(s_DeviceKey) == 0)
             {

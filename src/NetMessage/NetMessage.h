@@ -160,6 +160,14 @@ public:
     NetMessage(std::vector<uint8_t>& v_Data);
     
     /**
+     *  Data constructor.
+     *
+     *  \param v_Data The data for the net message.
+     */
+    
+    NetMessage(std::vector<uint8_t> const& v_Data);
+    
+    /**
      *  Default destructor.
      */
     

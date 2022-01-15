@@ -282,7 +282,7 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
         size_t i = 0;
         size_t us_Count = c_Result.count();
         
-        for (i = 0; i < us_Count; ++i)
+        for (; i < us_Count; ++i)
         {
             if (c_Result.fetchOne()[1].get<std::string>().compare(s_DeviceKey) == 0)
             {
@@ -410,6 +410,9 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
     std::string s_ChannelName(c_Request.p_Channel,
                               c_Request.p_Channel + strnlen(c_Request.p_Channel, NetMessageV1::us_SizeServerChannel));
     
+    // Last update limit
+    uint64_t u64_MaxTimeDiff = time(NULL) - CONNECTION_TASK_MAX_UPDATE_DIFF_S;
+    
     // App clients want a already existing connection, platform clients empty servers
     // Platform clients can therefore simply check by channel name which server is the least occupied.
     // App clients check first which connections for the device key exist, and those connections are then
@@ -444,7 +447,6 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             //        newest one by time stamp!
             size_t us_Count = c_CDCResult.count();
             uint64_t u64_LastUpdate = 0;
-            uint64_t u64_MaxTimeDiff = time(NULL) - CONNECTION_TASK_MAX_UPDATE_DIFF_S;
             
             for (size_t i = 0; i < us_Count; ++i)
             {
@@ -457,11 +459,15 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                                                .where(std::string(p_CLFieldName[CL_CHANNEL_ID]) +
                                                       " == :valueA AND " +
                                                       std::string(p_CLFieldName[CL_NAME]) +
-                                                      " == :valueB")
+                                                      " == :valueB AND " +
+                                                      std::string(p_CLFieldName[CL_LAST_UPDATE]) +
+                                                      " >= :valueC")
                                                .bind("valueA",
                                                      c_CDCResult.fetchOne()[0].get<uint32_t>())
                                                .bind("valueB",
                                                      s_ChannelName)
+                                               .bind("valueC",
+                                                     u64_MaxTimeDiff)
                                                .execute();
                 
                 // Check row result, there should be only one!
@@ -475,7 +481,7 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                 // Now check the last update
                 uint64_t u64_RowUpdate = c_Row[4].get<uint64_t>();
                 
-                if (u64_RowUpdate < u64_LastUpdate || u64_RowUpdate < u64_MaxTimeDiff)
+                if (u64_RowUpdate < u64_LastUpdate)
                 {
                     continue;
                 }
@@ -483,8 +489,8 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                 u64_LastUpdate = u64_RowUpdate;
                 
                 // Now set the channel info
-                s_Address = c_Row[1].get<std::string>();
-                u32_Port = c_Row[2].get<int32_t>();
+                s_Address = c_Row[2].get<std::string>();
+                u32_Port = c_Row[3].get<int32_t>();
                 u8_Result = NetMessage::ERR_NONE;
             }
             
@@ -515,9 +521,13 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                                                  p_CLFieldName[CL_ASSISTANT_CONNECTIONS],   /* 4 */
                                                  p_CLFieldName[CL_LAST_UPDATE])             /* 5 */
                                          .where(std::string(p_CLFieldName[CL_NAME]) +
-                                                " == :value")
-                                         .bind("value",
+                                                " == :valueA AND " +
+                                                std::string(p_CLFieldName[CL_LAST_UPDATE]) +
+                                                " >= :valueB")
+                                         .bind("valueA",
                                                s_ChannelName)
+                                         .bind("valueB",
+                                               u64_MaxTimeDiff)
                                          .execute();
             
             // Now get the channel address
@@ -530,21 +540,15 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             //        newest one by time stamp!
             size_t us_Count = c_Result.count();
             uint32_t u32_Connections = ((uint32_t) - 1);
-            uint64_t u64_MaxTimeDiff = time(NULL) - CONNECTION_TASK_MAX_UPDATE_DIFF_S;
             
             for (size_t i = 0; i < us_Count; ++i)
             {
                 Row c_Row = c_Result.fetchOne();
                 
-                // We need to check update time and connections
-                uint64_t u64_RowUpdate = c_Row[5].get<uint64_t>();
+                // We need to check assistant connections
                 uint32_t u32_RowConnections = c_Row[4].get<uint32_t>();
                 
-                if (u64_RowUpdate < u64_MaxTimeDiff)
-                {
-                    continue;
-                }
-                else if (u32_RowConnections >= u32_Connections)
+                if (u32_RowConnections >= u32_Connections)
                 {
                     continue;
                 }

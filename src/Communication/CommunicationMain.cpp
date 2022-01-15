@@ -34,7 +34,7 @@
 
 // Pre-defined
 #ifndef COMMUNICATION_SERVER_SET_LAST_UPDATE_MS
-    #define COMMUNICATION_SERVER_SET_LAST_UPDATE_MS 30 * 1000
+    #define COMMUNICATION_SERVER_SET_LAST_UPDATE_MS 240 * 1000
 #endif
 
 //*************************************************************************************
@@ -142,6 +142,9 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
         // Insert active state
         ClearConnections(c_Database, c_Config.i_ChannelID);
         SetLastUpdate(c_Database, c_Config.i_ChannelID);
+        
+        Logger::Singleton().Log(Logger::INFO, "Performed database setup for server.",
+                                "CommunicationMain.cpp", __LINE__);
         
         // We can now start updating connections
         std::list<std::unique_ptr<NetConnection>> l_Connection;

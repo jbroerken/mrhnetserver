@@ -48,16 +48,25 @@ NetMessage::NetMessage(std::vector<uint8_t>& v_Data)
     {
         throw NetException("Invalid message data size!");
     }
-    else if (v_Data.size() > us_BufferSize)
-    {
-        throw NetException("Data buffer size is too large!");
-    }
-    else if (v_Data[us_IDPos] > NET_MESSAGE_LIST_MAX)
-    {
-        throw NetException("Unknown message ID!");
-    }
     
     this->v_Data.swap(v_Data);
+    
+    if (this->v_Data.size() < us_BufferSize)
+    {
+        this->v_Data.insert(this->v_Data.end(),
+                            us_BufferSize - this->v_Data.size(),
+                            0);
+    }
+}
+
+NetMessage::NetMessage(std::vector<uint8_t> const& v_Data)
+{
+    if (v_Data.size() < us_DataPos)
+    {
+        throw NetException("Invalid message data size!");
+    }
+    
+    this->v_Data = v_Data;
     
     if (this->v_Data.size() < us_BufferSize)
     {
