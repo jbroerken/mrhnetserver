@@ -37,8 +37,6 @@
 #include "./Revision.h"
 
 // Pre-defined
-#define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/Users/Jens/Desktop/BA_Source/NetServer/mrhnetserver_speech.conf"
-
 #ifndef MRH_SRV_DEFAULT_CONFIG_FILE_PATH
     #define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/usr/local/etc/mrhnetserver.conf"
 #endif
