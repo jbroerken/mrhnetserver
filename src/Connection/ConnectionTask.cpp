@@ -217,21 +217,17 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     // Version and type valid?
     if (u8_ClientType != CLIENT_APP && u8_ClientType != CLIENT_PLATFORM)
     {
-        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-        {
-            LogClientEvent("Authentication failed: Invalid client type.", __LINE__);
-        }
-        
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+        LogClientEvent("Authentication failed: Invalid client type.", __LINE__);
+#endif
         SendAuthResult(NetMessage::ERR_SA_UNK_ACTOR);
         return DecrementAuthAttempt();
     }
     else if (c_Request.u8_Version != NetMessage::u8_NetMessageVersion)
     {
-        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-        {
-            LogClientEvent("Authentication failed: Invalid net message version.", __LINE__);
-        }
-        
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+        LogClientEvent("Authentication failed: Invalid net message version.", __LINE__);
+#endif
         SendAuthResult(NetMessage::ERR_SA_VERSION);
         return DecrementAuthAttempt();
     }
@@ -262,21 +258,18 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
         }
         else
         {
-            if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-            {
-                LogClientEvent("Authentication failed: Invalid results for given account mail address.", __LINE__);
-            }
-            
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+            LogClientEvent("Authentication failed: Invalid results for given account mail address.", __LINE__);
+#endif
             SendAuthResult(NetMessage::ERR_SG_ERROR);
             return DecrementAuthAttempt();
         }
     }
     catch (std::exception& e)
     {
-        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-        {
-            LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
-        }
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+        LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+#endif
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
@@ -290,13 +283,11 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
         s_Salt.size() > us_SizeAccountPasswordSalt ||
         s_Password.size() > us_SizeAccountPassword)
     {
-        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-        {
-            LogClientEvent("Authentication failed: Failed to get account password hash and salt.", __LINE__);
-        }
-        
         s_Password = std::string(""); // Reset for auth proof check
         
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+        LogClientEvent("Authentication failed: Failed to get account password hash and salt.", __LINE__);
+#endif
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
@@ -338,10 +329,9 @@ bool ConnectionTask::AuthRequest(std::unique_ptr<WorkerShared>& p_Shared, NetMes
     {
         s_Password = std::string("");
         
-        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-        {
-            LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
-        }
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+        LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+#endif
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
@@ -385,11 +375,9 @@ bool ConnectionTask::AuthProof(NetMessageV1::C_MSG_AUTH_PROOF_DATA c_Proof) noex
     //        point! The size call always returns 0.
     if (s_Password.size() == 0 || ServerAuth::CompareNonce(u32_Nonce, c_Proof.p_NonceHash, s_Password.data()) == false)
     {
-        if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-        {
-            LogClientEvent("Authentication failed: Account encrypted nonce mismatch.", __LINE__);
-        }
-        
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+        LogClientEvent("Authentication failed: Account encrypted nonce mismatch.", __LINE__);
+#endif
         SendAuthResult(NetMessage::ERR_SA_ACCOUNT);
         return DecrementAuthAttempt();
     }
@@ -532,10 +520,9 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         }
         catch (std::exception& e)
         {
-            if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-            {
-                LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
-            }
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+            LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+#endif
             SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_CR_NO_CHANNEL);
             return true;
         }
@@ -598,10 +585,9 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         }
         catch (std::exception& e)
         {
-            if (CONNECTION_TASK_EXTENDED_LOGGING > 0)
-            {
-                LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
-            }
+#if CONNECTION_TASK_EXTENDED_LOGGING > 0
+            LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+#endif
             SendChannelResponse(s_ChannelName, "", 0, NetMessage::ERR_CR_NO_CHANNEL);
             return true;
         }

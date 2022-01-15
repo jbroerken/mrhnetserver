@@ -206,20 +206,17 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
     }
     catch (NetException& e)
     {
-        c_Logger.Log(Logger::WARNING, e.what2() +
-                                      "(Communication Server)",
+        c_Logger.Log(Logger::WARNING, e.what2(),
                      "CommunicationMain.cpp", __LINE__);
     }
     catch (ServerException& e)
     {
-        c_Logger.Log(Logger::WARNING, e.what2() +
-                                      "(Communication Server)",
+        c_Logger.Log(Logger::WARNING, e.what2(),
                      "CommunicationMain.cpp", __LINE__);
     }
     catch (std::exception& e)
     {
-        c_Logger.Log(Logger::WARNING, std::string(e.what()) +
-                                      "(Communication Server)",
+        c_Logger.Log(Logger::WARNING, e.what(),
                      "CommunicationMain.cpp", __LINE__);
     }
 }

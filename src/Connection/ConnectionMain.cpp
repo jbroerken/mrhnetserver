@@ -123,20 +123,17 @@ void ConnectionMain::Run(Configuration& c_Config, bool& b_Run)
     }
     catch (NetException& e)
     {
-        c_Logger.Log(Logger::WARNING, e.what2() +
-                                      "(Connection Server)",
+        c_Logger.Log(Logger::WARNING, e.what2(),
                      "ConnectionMain.cpp", __LINE__);
     }
     catch (ServerException& e)
     {
-        c_Logger.Log(Logger::WARNING, e.what2() +
-                                      "(Connection Server)",
+        c_Logger.Log(Logger::WARNING, e.what2(),
                      "ConnectionMain.cpp", __LINE__);
     }
     catch (std::exception& e)
     {
-        c_Logger.Log(Logger::WARNING, std::string(e.what()) +
-                                      "(Connection Server)",
+        c_Logger.Log(Logger::WARNING, e.what(),
                      "ConnectionMain.cpp", __LINE__);
     }
 }
