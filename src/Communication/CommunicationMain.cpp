@@ -55,6 +55,18 @@ static void ClearConnections(Database& c_Database, int i_ChannelID)
             .bind("value",
                   i_ChannelID)
             .execute();
+        
+        c_Database
+            .c_Session
+            .getSchema(c_Database.s_Database)
+            .getTable(DatabaseTable::p_CLTableName)
+            .update()
+            .set(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_ASSISTANT_CONNECTIONS]), 0)
+            .where(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_CHANNEL_ID]) +
+                   " == :value")
+            .bind("value",
+                  i_ChannelID)
+            .execute();
     }
     catch (std::exception& e)
     {

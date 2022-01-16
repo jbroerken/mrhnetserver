@@ -41,7 +41,7 @@
     #define COMMUNICATION_TASK_MAX_UPDATE_DIFF_S 300
 #endif
 #ifndef COMMUNICATION_TASK_EXTENDED_LOGGING
-    #define COMMUNICATION_TASK_EXTENDED_LOGGING 1//0
+    #define COMMUNICATION_TASK_EXTENDED_LOGGING 0
 #endif
 
 using namespace NetMessageV1;
@@ -57,6 +57,35 @@ namespace
         return c_Database.c_Session
                          .getSchema(c_Database.s_Database)
                          .getTable(p_Table);
+    }
+    
+    inline void ChangeAssistantConnections(std::unique_ptr<WorkerShared>& p_Shared, uint32_t u32_ChannelID, bool b_Increment)
+    {
+        static std::string s_Affected = "UPDATE " +
+                                        std::string(p_CLTableName) +
+                                        " SET " +
+                                        std::string(p_CLFieldName[CL_ASSISTANT_CONNECTIONS]) +
+                                        " = ISNULL(" +
+                                        std::string(p_CLFieldName[CL_ASSISTANT_CONNECTIONS]) +
+                                        ", 0) ";
+        static std::string s_Condition = " WHERE " +
+                                         std::string(p_CLFieldName[CL_CHANNEL_ID]) +
+                                         " == " +
+                                         std::to_string(u32_ChannelID);
+        
+        try
+        {
+            dynamic_cast<Database&>(*(p_Shared.get()))
+                .c_Session
+                .sql(s_Affected +
+                     (b_Increment ? "+ 1" : "- 1") +
+                     s_Condition);
+            
+        }
+        catch (...)
+        {
+            throw;
+        }
     }
 }
 
@@ -113,6 +142,7 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
         {
             try
             {
+                // Remove assistant connection
                 GetTable(p_Shared, p_CDCTableName)
                     .remove()
                     .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
@@ -128,6 +158,9 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
                     .bind("valueC",
                           s_DeviceKey)
                     .execute();
+                
+                // Update assistant_connections field
+                ChangeAssistantConnections(p_Shared, u32_ChannelID, false);
             }
             catch (std::exception& e)
             {
@@ -648,7 +681,8 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
                         s_DeviceKey)
                 .execute();
             
-            // @TODO: update assistant_connections field
+            // Update assistant_connections field
+            ChangeAssistantConnections(p_Shared, u32_ChannelID, true);
         }
         catch (std::exception& e)
         {

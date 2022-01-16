@@ -54,7 +54,7 @@ static inline bool ExtractValue(std::string const& s_Base64, std::string& s_Valu
     }
     
     s_Value = std::string(us_Length, '\0');
-    memcpy(s_Value.data(), &(p_Binary[us_Pos]), us_Length);
+    memcpy((void*)(s_Value.data()), &(p_Binary[us_Pos]), us_Length);
     
     return true;
 }
