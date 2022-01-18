@@ -65,21 +65,27 @@ namespace
                                         std::string(p_CLTableName) +
                                         " SET " +
                                         std::string(p_CLFieldName[CL_ASSISTANT_CONNECTIONS]) +
-                                        " = ISNULL(" +
-                                        std::string(p_CLFieldName[CL_ASSISTANT_CONNECTIONS]) +
-                                        ", 0) ";
+                                        " = " +
+                                        std::string(p_CLFieldName[CL_ASSISTANT_CONNECTIONS]);
         static std::string s_Condition = " WHERE " +
                                          std::string(p_CLFieldName[CL_CHANNEL_ID]) +
-                                         " == " +
-                                         std::to_string(u32_ChannelID);
+                                         " = ";
         
         try
         {
-            dynamic_cast<Database&>(*(p_Shared.get()))
-                .c_Session
-                .sql(s_Affected +
-                     (b_Increment ? "+ 1" : "- 1") +
-                     s_Condition);
+            Database& c_Database = dynamic_cast<Database&>(*(p_Shared.get()));
+            
+            c_Database.c_Session
+                      .sql("USE " +
+                           c_Database.s_Database)
+                      .execute();
+            
+            c_Database.c_Session
+                      .sql(s_Affected +
+                           (b_Increment ? "+ 1" : "- 1") +
+                           s_Condition +
+                           std::to_string(u32_ChannelID))
+                      .execute();
             
         }
         catch (...)
