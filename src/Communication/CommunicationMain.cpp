@@ -41,16 +41,16 @@
 // Channel List
 //*************************************************************************************
 
-static void ClearConnections(Database& c_Database, int i_ChannelID)
+static void ClearConnections(Database& c_Database, int i_ChannelID, int i_MaxConnections)
 {
     try
     {
         c_Database
             .c_Session
             .getSchema(c_Database.s_Database)
-            .getTable(DatabaseTable::p_CDCTableName)
+            .getTable(DatabaseTable::p_SPCTableName)
             .remove()
-            .where(std::string(DatabaseTable::p_CDCFieldName[DatabaseTable::CDC_CHANNEL_ID]) +
+            .where(std::string(DatabaseTable::p_SPCFieldName[DatabaseTable::SPC_SERVER_ID]) +
                    " == :value")
             .bind("value",
                   i_ChannelID)
@@ -59,10 +59,10 @@ static void ClearConnections(Database& c_Database, int i_ChannelID)
         c_Database
             .c_Session
             .getSchema(c_Database.s_Database)
-            .getTable(DatabaseTable::p_CLTableName)
+            .getTable(DatabaseTable::p_SLTableName)
             .update()
-            .set(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_ASSISTANT_CONNECTIONS]), 0)
-            .where(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_CHANNEL_ID]) +
+            .set(std::string(DatabaseTable::p_SLFieldName[DatabaseTable::SL_ASSISTANT_CONNECTIONS]), 0)
+            .where(std::string(DatabaseTable::p_SLFieldName[DatabaseTable::SL_SERVER_ID]) +
                    " == :value")
             .bind("value",
                   i_ChannelID)
@@ -82,11 +82,11 @@ static void SetLastUpdate(Database& c_Database, int i_ChannelID) noexcept
         c_Database
             .c_Session
             .getSchema(c_Database.s_Database)
-            .getTable(DatabaseTable::p_CLTableName)
+            .getTable(DatabaseTable::p_SLTableName)
             .update()
-            .set(DatabaseTable::p_CLFieldName[DatabaseTable::CL_LAST_UPDATE],
+            .set(DatabaseTable::p_SLFieldName[DatabaseTable::SL_LAST_UPDATE],
                  time(NULL))
-            .where(std::string(DatabaseTable::p_CLFieldName[DatabaseTable::CL_CHANNEL_ID]) +
+            .where(std::string(DatabaseTable::p_SLFieldName[DatabaseTable::SL_SERVER_ID]) +
                    " == :value")
             .bind("value",
                   i_ChannelID)
@@ -151,9 +151,13 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
                             c_Config.s_MySQLPassword,
                             c_Config.s_MySQLDatabase);
         
+        // Create server info
+        ServerInfo c_ServerInfo(c_Config.i_ServerID,
+                                c_Config.i_MaxClientCount);
+        
         // Insert active state
-        ClearConnections(c_Database, c_Config.i_ChannelID);
-        SetLastUpdate(c_Database, c_Config.i_ChannelID);
+        ClearConnections(c_Database, c_Config.i_ServerID, c_Config.i_MaxClientCount);
+        SetLastUpdate(c_Database, c_Config.i_ServerID);
         
         Logger::Singleton().Log(Logger::INFO, "Performed database setup for server.",
                                 "CommunicationMain.cpp", __LINE__);
@@ -177,7 +181,7 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
                 {
                     std::unique_ptr<WorkerTask> p_Task = std::make_unique<CommunicationTask>(Connection,
                                                                                              c_ExchangeContainer,
-                                                                                             c_Config.i_ChannelID);
+                                                                                             c_ServerInfo);
                     c_WorkerPool.AddTask(p_Task);
                 }
                 catch (ServerException& e)
@@ -208,7 +212,7 @@ void CommunicationMain::Run(Configuration& c_Config, bool& b_Run)
             
             if (u64_SetLastUpdate > COMMUNICATION_SERVER_SET_LAST_UPDATE_MS)
             {
-                SetLastUpdate(c_Database, c_Config.i_ChannelID);
+                SetLastUpdate(c_Database, c_Config.i_ServerID);
                 u64_SetLastUpdate = 0;
             }
         }

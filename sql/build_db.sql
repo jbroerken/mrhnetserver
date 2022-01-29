@@ -47,36 +47,37 @@ DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Known user devices';
 
 
 --
--- Channel List
+-- Server List
 --
 
-DROP TABLE IF EXISTS `channel_list`;
+DROP TABLE IF EXISTS `server_list`;
 
-CREATE TABLE `channel_list` 
+CREATE TABLE `server_list` 
 (
-    `channel_id` int unsigned NOT NULL COMMENT 'Channel identifier',
-    `name` varchar(64) NOT NULL DEFAULT '' COMMENT 'Channel identification name',
-    `address` varchar(256) NOT NULL DEFAULT '127.0.0.1' COMMENT 'Channel network address',
-    `port` int NOT NULL DEFAULT '-1' COMMENT 'Channel network port',
-    `assistant_connections` int unsigned NOT NULL DEFAULT '0' COMMENT 'Channel assistant connection count',
-    `last_update_s` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'Channel update time stamp',
-    PRIMARY KEY (`channel_id`)
+    `server_id` int unsigned NOT NULL COMMENT 'Server identifier',
+    `channel` varchar(64) NOT NULL DEFAULT '' COMMENT 'Channel identification name',
+    `address` varchar(256) NOT NULL DEFAULT '127.0.0.1' COMMENT 'Server network address',
+    `port` int NOT NULL DEFAULT '-1' COMMENT 'Server network port',
+    `assistant_connections` int unsigned NOT NULL DEFAULT '0' COMMENT 'Server assistant connection count',
+    `max_connections` int unsigned NOT NULL DEFAULT '0' COMMENT 'Server total maximum connection count',
+    `last_update_s` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'Server update time stamp',
+    PRIMARY KEY (`server_id`)
 ) 
-DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Known channels for communication';
+DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Known servers for communication';
 
 
 --
--- Channel Device Connections
+-- Server Device Connections
 --
 
-DROP TABLE IF EXISTS `channel_device_connections`;
+DROP TABLE IF EXISTS `server_device_connections`;
 
-CREATE TABLE `channel_device_connections` 
+CREATE TABLE `server_device_connections` 
 (
-    `channel_id` int unsigned NOT NULL COMMENT 'Channel list identifier',
+    `server_id` int unsigned NOT NULL COMMENT 'Server list identifier',
     `user_id` int unsigned NOT NULL COMMENT 'User Account identifier',
     `device_key` varchar(25) NOT NULL DEFAULT '' COMMENT 'Connection device key',
-    FOREIGN KEY (`channel_id`) REFERENCES channel_list(`channel_id`),
+    FOREIGN KEY (`server_id`) REFERENCES server_list(`server_id`),
     FOREIGN KEY (`user_id`) REFERENCES user_account(`user_id`)
 ) 
-DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Active connections for a active channel';
+DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Active connections for a server';

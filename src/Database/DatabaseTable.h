@@ -135,32 +135,34 @@ namespace DatabaseTable
      *  Table Name
      */
     
-    constexpr const char* p_CLTableName = "channel_list";
+    constexpr const char* p_SLTableName = "server_list";
     
     /**
      *  Field Names
      */
     
-    enum CLFields
+    enum SLFields
     {
-        CL_CHANNEL_ID = 0,
-        CL_NAME = 1,
-        CL_ADDRESS = 2,
-        CL_PORT = 3,
-        CL_ASSISTANT_CONNECTIONS = 4,
-        CL_LAST_UPDATE = 5,
+        SL_SERVER_ID = 0,
+        SL_CHANNEL = 1,
+        SL_ADDRESS = 2,
+        SL_PORT = 3,
+        SL_ASSISTANT_CONNECTIONS = 4,
+        SL_MAX_CONNECTIONS = 5,
+        SL_LAST_UPDATE = 6,
         
-        CL_FIELDS_MAX = CL_LAST_UPDATE,
-        CL_FIELDS_COUNT = CL_FIELDS_MAX + 1
+        SL_FIELDS_MAX = SL_LAST_UPDATE,
+        SL_FIELDS_COUNT = SL_FIELDS_MAX + 1
     };
     
-    constexpr const char* p_CLFieldName[CL_FIELDS_COUNT] =
+    constexpr const char* p_SLFieldName[SL_FIELDS_COUNT] =
     {
-        "channel_id",
-        "name",
+        "server_id",
+        "channel",
         "address",
         "port",
         "assistant_connections",
+        "max_connections",
         "last_update_s"
     };
     
@@ -168,7 +170,7 @@ namespace DatabaseTable
      *  Row Data
      */
     
-    struct ACRow
+    struct SLRow
     {
     public:
         
@@ -176,42 +178,42 @@ namespace DatabaseTable
         // Data
         //*************************************************************************************
         
-        uint32_t u32_ChannelID;
+        uint32_t u32_ServerID;
         std::string s_Name;
         std::string s_Address;
         int32_t s32_Port;
         uint32_t u32_AssistantConnections;
-        int32_t s32_IsActive;
+        uint32_t u32_MaxConnections;
         uint64_t u64_LastUpdate;
     };
     
     //*************************************************************************************
-    // Channel Device Connections Table
+    // Server Platform Connections Table
     //*************************************************************************************
     
     /**
      *  Table Name
      */
     
-    constexpr const char* p_CDCTableName = "channel_device_connections";
+    constexpr const char* p_SPCTableName = "server_platform_connections";
     
     /**
      *  Field Names
      */
     
-    enum CDCFields
+    enum SPCFields
     {
-        CDC_CHANNEL_ID = 0,
-        CDC_USER_ID = 1,
-        CDC_DEVICE_KEY = 2,
+        SPC_SERVER_ID = 0,
+        SPC_USER_ID = 1,
+        SPC_DEVICE_KEY = 2,
         
-        CDC_FIELDS_MAX = CDC_DEVICE_KEY,
-        CDC_FIELDS_COUNT = CDC_FIELDS_MAX + 1
+        SPC_FIELDS_MAX = SPC_DEVICE_KEY,
+        SPC_FIELDS_COUNT = SPC_FIELDS_MAX + 1
     };
     
-    constexpr const char* p_CDCFieldName[CDC_FIELDS_COUNT] =
+    constexpr const char* p_SPCFieldName[SPC_FIELDS_COUNT] =
     {
-        "channel_id",
+        "server_id",
         "user_id",
         "device_key"
     };
@@ -220,7 +222,7 @@ namespace DatabaseTable
      *  Row Data
      */
     
-    struct CDCRow
+    struct SPCRow
     {
     public:
         
@@ -228,7 +230,7 @@ namespace DatabaseTable
         // Data
         //*************************************************************************************
         
-        uint32_t u32_ChannelID;
+        uint32_t u32_ServerID;
         uint32_t u32_UserID;
         std::string s_DeviceKey;
     };

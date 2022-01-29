@@ -62,13 +62,13 @@ namespace
     inline void ChangeAssistantConnections(std::unique_ptr<WorkerShared>& p_Shared, uint32_t u32_ChannelID, bool b_Increment)
     {
         static std::string s_Affected = "UPDATE " +
-                                        std::string(p_CLTableName) +
+                                        std::string(p_SLTableName) +
                                         " SET " +
-                                        std::string(p_CLFieldName[CL_ASSISTANT_CONNECTIONS]) +
+                                        std::string(p_SLFieldName[SL_ASSISTANT_CONNECTIONS]) +
                                         " = " +
-                                        std::string(p_CLFieldName[CL_ASSISTANT_CONNECTIONS]);
+                                        std::string(p_SLFieldName[SL_ASSISTANT_CONNECTIONS]);
         static std::string s_Condition = " WHERE " +
-                                         std::string(p_CLFieldName[CL_CHANNEL_ID]) +
+                                         std::string(p_SLFieldName[SL_SERVER_ID]) +
                                          " = ";
         
         try
@@ -102,16 +102,16 @@ namespace
 
 CommunicationTask::CommunicationTask(std::unique_ptr<NetConnection>& p_Connection,
                                      ExchangeContainer& c_ExchangeContainer,
-                                     uint32_t u32_ChannelID) : WorkerTask(),
-                                                               p_Connection(p_Connection.release()),
-                                                               c_ExchangeContainer(c_ExchangeContainer),
-                                                               p_MessageExchange(NULL),
-                                                               u32_ChannelID(u32_ChannelID),
-                                                               b_Authenticated(false),
-                                                               s32_AuthAttempts(COMMUNICATION_TASK_MAX_AUTH_RETRY),
-                                                               u8_ClientType(ACTOR_TYPE_COUNT),
-                                                               s_Password(""),
-                                                               s_DeviceKey("")
+                                     ServerInfo& c_ServerInfo) : WorkerTask(),
+                                                                 p_Connection(p_Connection.release()),
+                                                                 c_ExchangeContainer(c_ExchangeContainer),
+                                                                 p_MessageExchange(NULL),
+                                                                 c_ServerInfo(c_ServerInfo),
+                                                                 b_Authenticated(false),
+                                                                 s32_AuthAttempts(COMMUNICATION_TASK_MAX_AUTH_RETRY),
+                                                                 u8_ClientType(ACTOR_TYPE_COUNT),
+                                                                 s_Password(""),
+                                                                 s_DeviceKey("")
 {
     if (this->p_Connection == NULL || this->p_Connection->GetConnected() == false)
     {
@@ -143,36 +143,48 @@ bool CommunicationTask::Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcep
         NetMessage c_Message(NetMessage::S_MSG_PARTNER_CLOSED);
         GiveMessage(c_Message);
         
-        // Remove platform connection from table
-        if (u8_ClientType == CLIENT_PLATFORM && b_Authenticated == true)
+        // Decrease connection count
+        if (b_Authenticated == true)
         {
-            try
+            if (u8_ClientType == CLIENT_APP)
             {
-                // Remove assistant connection
-                GetTable(p_Shared, p_CDCTableName)
-                    .remove()
-                    .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
-                           " == :valueA AND " +
-                           std::string(p_CDCFieldName[CDC_USER_ID]) +
-                           " == :valueB AND " +
-                           std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
-                           " == :valueC")
-                    .bind("valueA",
-                          u32_ChannelID)
-                    .bind("valueB",
-                          u32_UserID)
-                    .bind("valueC",
-                          s_DeviceKey)
-                    .execute();
-                
-                // Update assistant_connections field
-                ChangeAssistantConnections(p_Shared, u32_ChannelID, false);
+                std::lock_guard<std::mutex> c_Guard(c_ServerInfo.c_ACMutex);
+                c_ServerInfo.u32_AppConnections -= 1;
             }
-            catch (std::exception& e)
+            else if (u8_ClientType == CLIENT_PLATFORM)
             {
-#if COMMUNICATION_TASK_EXTENDED_LOGGING > 0
-                LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
-#endif
+                c_ServerInfo.c_PCMutex.lock();
+                c_ServerInfo.u32_PlatformConnections -= 1;
+                c_ServerInfo.c_PCMutex.unlock();
+                
+                // Remove assistant connection from database
+                try
+                {
+                    GetTable(p_Shared, p_SPCTableName)
+                        .remove()
+                        .where(std::string(p_SPCFieldName[SPC_SERVER_ID]) +
+                               " == :valueA AND " +
+                               std::string(p_SPCFieldName[SPC_USER_ID]) +
+                               " == :valueB AND " +
+                               std::string(p_SPCFieldName[SPC_DEVICE_KEY]) +
+                               " == :valueC")
+                        .bind("valueA",
+                              c_ServerInfo.u32_ServerID)
+                        .bind("valueB",
+                              u32_UserID)
+                        .bind("valueC",
+                              s_DeviceKey)
+                        .execute();
+                    
+                    // Update assistant_connections field
+                    ChangeAssistantConnections(p_Shared, c_ServerInfo.u32_ServerID, false);
+                }
+                catch (std::exception& e)
+                {
+    #if COMMUNICATION_TASK_EXTENDED_LOGGING > 0
+                    LogClientEvent("SQL querry failed: " + std::string(e.what()), __LINE__);
+    #endif
+                }
             }
         }
         
@@ -639,27 +651,37 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
     {
         try
         {
+            // Lock server infp
+            std::lock_guard<std::mutex> c_InfoGuard(c_ServerInfo.c_PCMutex);
+            
+            // Server full for platform connections?
+            if (c_ServerInfo.u32_PlatformConnections >= (c_ServerInfo.u32_MaxConnections / 2))
+            {
+                SendAuthResult(NetMessage::ERR_CR_FULL);
+                return false; // Immediatly disconnect
+            }
+            
             // Check if a platform connection for this device key already exists
-            Table c_CDCTable = GetTable(p_Shared, p_CDCTableName);
-            RowResult c_CDCResult = c_CDCTable
-                                        .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
-                                                p_CDCFieldName[CDC_USER_ID],        /* 1 */
-                                                p_CDCFieldName[CDC_DEVICE_KEY])     /* 2 */
-                                        .where(std::string(p_CDCFieldName[CDC_CHANNEL_ID]) +
+            Table c_SPCTable = GetTable(p_Shared, p_SPCTableName);
+            RowResult c_SPCResult = c_SPCTable
+                                        .select(p_SPCFieldName[SPC_SERVER_ID],      /* 0 */
+                                                p_SPCFieldName[SPC_USER_ID],        /* 1 */
+                                                p_SPCFieldName[SPC_DEVICE_KEY])     /* 2 */
+                                        .where(std::string(p_SPCFieldName[SPC_SERVER_ID]) +
                                                " == :valueA AND " +
-                                               std::string(p_CDCFieldName[CDC_USER_ID]) +
+                                               std::string(p_SPCFieldName[SPC_USER_ID]) +
                                                " == :valueB AND " +
-                                               std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
+                                               std::string(p_SPCFieldName[SPC_DEVICE_KEY]) +
                                                " == :valueC")
                                         .bind("valueA",
-                                              u32_ChannelID)
+                                              c_ServerInfo.u32_ServerID)
                                         .bind("valueB",
                                               u32_UserID)
                                         .bind("valueC",
                                               s_DeviceKey)
                                         .execute();
             
-            if (c_CDCResult.count() != 0)
+            if (c_SPCResult.count() != 0)
             {
 #if COMMUNICATION_TASK_EXTENDED_LOGGING > 0
                 LogClientEvent("Platform client already connected.", __LINE__);
@@ -673,22 +695,24 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
                 LogClientEvent("Platform client connected, add MessageExchange for app client.", __LINE__);
             }
 #endif
-            
             // First, create a exchange for app client access
             p_MessageExchange = c_ExchangeContainer.CreateExchange(s_DeviceKey);
             
             // Created, now commit to db that connection exists
-            c_CDCTable
-                .insert(p_CDCFieldName[CDC_CHANNEL_ID],
-                        p_CDCFieldName[CDC_USER_ID],
-                        p_CDCFieldName[CDC_DEVICE_KEY])
-                .values(u32_ChannelID,
+            c_SPCTable
+                .insert(p_SPCFieldName[SPC_SERVER_ID],
+                        p_SPCFieldName[SPC_USER_ID],
+                        p_SPCFieldName[SPC_DEVICE_KEY])
+                .values(c_ServerInfo.u32_ServerID,
                         u32_UserID,
                         s_DeviceKey)
                 .execute();
             
             // Update assistant_connections field
-            ChangeAssistantConnections(p_Shared, u32_ChannelID, true);
+            ChangeAssistantConnections(p_Shared, c_ServerInfo.u32_ServerID, true);
+            
+            // Set new connection count
+            c_ServerInfo.u32_PlatformConnections += 1;
         }
         catch (std::exception& e)
         {
@@ -705,6 +729,16 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
     {
         try
         {
+            // Lock server infp
+            std::lock_guard<std::mutex> c_InfoGuard(c_ServerInfo.c_ACMutex);
+            
+            // Server full for platform connections?
+            if (c_ServerInfo.u32_AppConnections >= (c_ServerInfo.u32_MaxConnections / 2))
+            {
+                SendAuthResult(NetMessage::ERR_CR_FULL);
+                return false; // Immediatly disconnect
+            }
+            
             // Get platform client created exchange
             // @NOTE: GetExchange removes exchange from container,
             //        Removing the chance for a second app client to connect
@@ -713,6 +747,9 @@ bool CommunicationTask::AuthProof(std::unique_ptr<WorkerShared>& p_Shared, NetMe
             
             // Got exchange, clean for new communication
             ClearExchange();
+            
+            // Increase app connections
+            c_ServerInfo.u32_AppConnections += 1;
             
 #if COMMUNICATION_TASK_EXTENDED_LOGGING > 0
             LogClientEvent("Retrieved and cleared Platform client created MessageExchange.", __LINE__);

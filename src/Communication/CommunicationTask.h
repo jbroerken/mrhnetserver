@@ -31,6 +31,7 @@
 #include "../WorkerPool/WorkerTask.h"
 #include "../NetMessage/NetConnection.h"
 #include "./ExchangeContainer.h"
+#include "./ServerInfo.h"
 
 
 class CommunicationTask : public WorkerTask
@@ -46,12 +47,12 @@ public:
      *
      *  \param p_Connection The connection for the task.
      *  \param c_ExchangeContainer The container used for message exchanges.
-     *  \param u32_ChannelID The channel id provided by the communication server.
+     *  \param c_ServerInfo The server info to use.
      */
     
     CommunicationTask(std::unique_ptr<NetConnection>& p_Connection,
                       ExchangeContainer& c_ExchangeContainer,
-                      uint32_t u32_ChannelID);
+                      ServerInfo& c_ServerInfo);
     
     /**
      *  Default destructor.
@@ -167,8 +168,8 @@ private:
     ExchangeContainer& c_ExchangeContainer;
     std::shared_ptr<MessageExchange> p_MessageExchange;
     
-    // Channel
-    uint32_t u32_ChannelID;
+    // Server
+    ServerInfo& c_ServerInfo;
     
     // Authentication
     bool b_Authenticated;

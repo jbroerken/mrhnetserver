@@ -444,13 +444,13 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         {
             // First we need to check for an actual platform connection
             // This also shows us where the connection is held
-            RowResult c_CDCResult = GetTable(p_Shared, p_CDCTableName)
-                                            .select(p_CDCFieldName[CDC_CHANNEL_ID],     /* 0 */
-                                                    p_CDCFieldName[CDC_USER_ID],        /* 1 */
-                                                    p_CDCFieldName[CDC_DEVICE_KEY])     /* 2 */
-                                            .where(std::string(p_CDCFieldName[CDC_USER_ID]) +
+            RowResult c_SPCResult = GetTable(p_Shared, p_SPCTableName)
+                                            .select(p_SPCFieldName[SPC_SERVER_ID],     /* 0 */
+                                                    p_SPCFieldName[SPC_USER_ID],        /* 1 */
+                                                    p_SPCFieldName[SPC_DEVICE_KEY])     /* 2 */
+                                            .where(std::string(p_SPCFieldName[SPC_USER_ID]) +
                                                    " == :valueA AND " +
-                                                   std::string(p_CDCFieldName[CDC_DEVICE_KEY]) +
+                                                   std::string(p_SPCFieldName[SPC_DEVICE_KEY]) +
                                                    " == :valueB")
                                             .bind("valueA",
                                                   u32_UserID)
@@ -465,25 +465,25 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
             
             // @NOTE: There might be dead channels etc inside, so we pick the
             //        newest one by time stamp!
-            size_t us_Count = c_CDCResult.count();
+            size_t us_Count = c_SPCResult.count();
             uint64_t u64_LastUpdate = 0;
             
             for (size_t i = 0; i < us_Count; ++i)
             {
-                RowResult c_CLResult = GetTable(p_Shared, p_CLTableName)
-                                               .select(p_CLFieldName[CL_CHANNEL_ID],   /* 0 */
-                                                       p_CLFieldName[CL_NAME],         /* 1 */
-                                                       p_CLFieldName[CL_ADDRESS],      /* 2 */
-                                                       p_CLFieldName[CL_PORT],         /* 3 */
-                                                       p_CLFieldName[CL_LAST_UPDATE])  /* 4 */
-                                               .where(std::string(p_CLFieldName[CL_CHANNEL_ID]) +
+                RowResult c_SLResult = GetTable(p_Shared, p_SLTableName)
+                                               .select(p_SLFieldName[SL_SERVER_ID],    /* 0 */
+                                                       p_SLFieldName[SL_CHANNEL],      /* 1 */
+                                                       p_SLFieldName[SL_ADDRESS],      /* 2 */
+                                                       p_SLFieldName[SL_PORT],         /* 3 */
+                                                       p_SLFieldName[SL_LAST_UPDATE])  /* 4 */
+                                               .where(std::string(p_SLFieldName[SL_SERVER_ID]) +
                                                       " == :valueA AND " +
-                                                      std::string(p_CLFieldName[CL_NAME]) +
+                                                      std::string(p_SLFieldName[SL_CHANNEL]) +
                                                       " == :valueB AND " +
-                                                      std::string(p_CLFieldName[CL_LAST_UPDATE]) +
+                                                      std::string(p_SLFieldName[SL_LAST_UPDATE]) +
                                                       " >= :valueC")
                                                .bind("valueA",
-                                                     c_CDCResult.fetchOne()[0].get<uint32_t>())
+                                                     c_SPCResult.fetchOne()[0].get<uint32_t>())
                                                .bind("valueB",
                                                      s_ChannelName)
                                                .bind("valueC",
@@ -491,12 +491,12 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                                                .execute();
                 
                 // Check row result, there should be only one!
-                if (c_CLResult.count() != 1)
+                if (c_SLResult.count() != 1)
                 {
                     continue;
                 }
                 
-                Row c_Row = c_CLResult.fetchOne();
+                Row c_Row = c_SLResult.fetchOne();
                 
                 // Now check the last update
                 uint64_t u64_RowUpdate = c_Row[4].get<uint64_t>();
@@ -533,16 +533,17 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
         {
             // First we need to grab all active channels based based on our
             // channel identifier
-            RowResult c_Result = GetTable(p_Shared, p_CLTableName)
-                                         .select(p_CLFieldName[CL_CHANNEL_ID],              /* 0 */
-                                                 p_CLFieldName[CL_NAME],                    /* 1 */
-                                                 p_CLFieldName[CL_ADDRESS],                 /* 2 */
-                                                 p_CLFieldName[CL_PORT],                    /* 3 */
-                                                 p_CLFieldName[CL_ASSISTANT_CONNECTIONS],   /* 4 */
-                                                 p_CLFieldName[CL_LAST_UPDATE])             /* 5 */
-                                         .where(std::string(p_CLFieldName[CL_NAME]) +
+            RowResult c_Result = GetTable(p_Shared, p_SLTableName)
+                                         .select(p_SLFieldName[SL_SERVER_ID],               /* 0 */
+                                                 p_SLFieldName[SL_CHANNEL],                 /* 1 */
+                                                 p_SLFieldName[SL_ADDRESS],                 /* 2 */
+                                                 p_SLFieldName[SL_PORT],                    /* 3 */
+                                                 p_SLFieldName[SL_ASSISTANT_CONNECTIONS],   /* 4 */
+                                                 p_SLFieldName[SL_MAX_CONNECTIONS],         /* 5 */
+                                                 p_SLFieldName[SL_LAST_UPDATE])             /* 6 */
+                                         .where(std::string(p_SLFieldName[SL_CHANNEL]) +
                                                 " == :valueA AND " +
-                                                std::string(p_CLFieldName[CL_LAST_UPDATE]) +
+                                                std::string(p_SLFieldName[SL_LAST_UPDATE]) +
                                                 " >= :valueB")
                                          .bind("valueA",
                                                s_ChannelName)
@@ -568,7 +569,11 @@ bool ConnectionTask::ChannelRequest(std::unique_ptr<WorkerShared>& p_Shared, Net
                 // We need to check assistant connections
                 uint32_t u32_RowConnections = c_Row[4].get<uint32_t>();
                 
-                if (u32_RowConnections >= u32_Connections)
+                if (u32_RowConnections >= (c_Row[5].get<uint32_t>() / 2)) // Half platform, half client
+                {
+                    continue;
+                }
+                else if (u32_RowConnections >= u32_Connections)
                 {
                     continue;
                 }

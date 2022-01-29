@@ -1,5 +1,5 @@
 /**
- *  Configuration.h
+ *  ServerInfo.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,20 +19,19 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef Configuration_h
-#define Configuration_h
+#ifndef ServerInfo_h
+#define ServerInfo_h
 
 // C / C++
 #include <cstdint>
-#include <string>
+#include <mutex>
 
 // External
 
 // Project
-#include "./ServerException.h"
 
 
-class Configuration
+class ServerInfo
 {
 public:
     
@@ -43,55 +42,50 @@ public:
     /**
      *  Default constructor.
      *
-     *  \param s_FilePath The full path to the configuration file.
+     *  \param u32_ServerID The id for the server.
+     *  \param u32_MaxConnections The max connections combined for the server.
      */
     
-    Configuration(std::string const& s_FilePath);
+    ServerInfo(uint32_t u32_ServerID,
+               uint32_t u32_MaxConnections) noexcept : u32_ServerID(u32_ServerID),
+                                                       u32_MaxConnections(u32_MaxConnections)
+    {}
+    
+    /**
+     *  Copy constructor. Disabled for this class.
+     *
+     *  \param c_MessageExchange MessageExchange class source.
+     */
+    
+    ServerInfo(MessageExchange const& c_MessageExchange) = delete;
     
     /**
      *  Default destructor.
      */
     
-    ~Configuration() noexcept;
+    ~ServerInfo() noexcept
+    {}
     
     //*************************************************************************************
     // Data
     //*************************************************************************************
     
-    // Shared
-    ActorType e_Type;
+    // Identification
+    const uint32_t u32_ServerID;
+    const uint32_t u32_MaxConnections;
     
-    int i_Port;
+    // Platform Connections
+    uint32_t u32_PlatformConnections;
+    std::mutex c_PCMutex;
     
-    std::string s_CertFilePath;
-    std::string s_KeyFilePath;
-    
-    int i_MaxClientCount;
-    
-    int i_ConnectionTimeoutS;
-    int i_ConnectionPulseMS;
-    int i_MessagePulseMS;
-    
-    // MySQL
-    std::string s_MySQLAddress;
-    int i_MySQLPort;
-    std::string s_MySQLUser;
-    std::string s_MySQLPassword;
-    std::string s_MySQLDatabase;
-    
-    // Connection Server
-    
-    // Communication Server
-    int i_ServerID;
+    // App Connections
+    uint32_t u32_AppConnections;
+    std::mutex c_ACMutex;
     
 private:
     
-    //*************************************************************************************
-    // Data
-    //*************************************************************************************
-    
 protected:
-
+    
 };
 
-#endif /* Configuration_h */
+#endif /* ServerInfo_h */
