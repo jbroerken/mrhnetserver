@@ -124,6 +124,8 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
             if (p_Context != NULL)
             {
                 p_Context->p_APITable->ConnectionClose(p_Context->p_Connection);
+                p_Context->p_Client->Disconnected();
+                
                 delete p_Context;
             }
             break;

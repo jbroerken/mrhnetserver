@@ -1,5 +1,5 @@
 /**
- *  ClientAuthentication.h
+ *  ClientCommunication.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,8 +19,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef ClientAuthentication_h
-#define ClientAuthentication_h
+#ifndef ClientCommunication_h
+#define ClientCommunication_h
 
 // C / C++
 
@@ -32,9 +32,9 @@
 #include "../../Exception.h"
 
 
-namespace ClientAuthentication
+namespace ClientCommunication
 {
     
 }
 
-#endif /* ClientAuthentication_h */
+#endif /* ClientCommunication_h */

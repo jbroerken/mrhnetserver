@@ -25,6 +25,8 @@
 
 // Project
 #include "./Client.h"
+#include "./Client/ClientAuthentication.h"
+#include "./Client/ClientCommunication.h"
 #include "./MsQuic/MsQuic.h"
 #include "../Logger.h"
 
@@ -42,12 +44,73 @@ Client::~Client() noexcept
 {}
 
 //*************************************************************************************
+// Disconnect
+//*************************************************************************************
+
+void Client::Disconnected() noexcept
+{
+    std::lock_guard<std::mutex> c_Guard(c_Mutex);
+    p_Connection = NULL;
+}
+
+void Client::Disconnect() noexcept
+{
+    if (p_Connection == NULL)
+    {
+        return;
+    }
+    
+    p_APITable->ConnectionShutdown(p_Connection,
+                                   QUIC_CONNECTION_SHUTDOWN_FLAG_NONE,
+                                   0);
+}
+
+//*************************************************************************************
 // Perform
 //*************************************************************************************
 
 bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
 {
-    return true;
+    // @NOTE: Same client might be in different threads due to
+    //        multiple added recieved messages!
+    //        We also can't simply return a finished result because
+    //        the current working thread might already past some
+    //        change which needs work!
+    if (c_Mutex.try_lock() == false)
+    {
+        return false;
+    }
+    
+    // Grab and process messages
+    for (auto& NetMessage : l_Recieved)
+    {
+        switch (NetMessage.GetID())
+        {
+            default:
+                Disconnect();
+                return true;
+        }
+    }
+    
+    // Processed recieved messages, now send
+    bool b_Result = true;
+    
+    try
+    {
+        Send();
+    }
+    catch (std::exception& e)
+    {
+        Logger::Singleton().Log(Logger::ERROR, "Failed to send net messages: " +
+                                               std::string(e.what()),
+                                "Client.cpp", __LINE__);
+        b_Result = false;
+    }
+    
+    // Return finished or retry
+    // @NOTE: On disconnected we send true, can't work on a
+    //        disconnected client!
+    return (p_Connection == NULL ? true : b_Result);
 }
 
 //*************************************************************************************

@@ -23,6 +23,7 @@
 #define Client_h
 
 // C / C++
+#include <mutex>
 #include <list>
 
 // External
@@ -30,7 +31,7 @@
 
 // Project
 #include "./MsQuic/StreamData.h"
-#include "../NetMessage/Ver/NetMessageV1.h"
+#include "../NetMessage/NetMessage.h"
 #include "../Job/Job.h"
 
 
@@ -67,6 +68,16 @@ public:
     ~Client() noexcept;
     
     //*************************************************************************************
+    // Disconnect
+    //*************************************************************************************
+    
+    /**
+     *  Set the client as disconnected.
+     */
+    
+    void Disconnected() noexcept;
+    
+    //*************************************************************************************
     // Perform
     //*************************************************************************************
     
@@ -95,6 +106,16 @@ public:
 private:
     
     //*************************************************************************************
+    // Disconnect
+    //*************************************************************************************
+    
+    /**
+     *  Disconnect the client.
+     */
+    
+    void Disconnect() noexcept;
+    
+    //*************************************************************************************
     // Send
     //*************************************************************************************
     
@@ -108,6 +129,9 @@ private:
     // Data
     //*************************************************************************************
     
+    // Thread
+    std::mutex c_Mutex;
+    
     // Net Message
     std::list<NetMessage> l_Recieved;
     std::list<NetMessage> l_Send;
@@ -116,6 +140,11 @@ private:
     const QUIC_API_TABLE* p_APITable;
     HQUIC p_Connection;
     std::list<StreamData> l_StreamData;
+    
+    // Authentication
+    bool b_Authenticated;
+    uint32_t u32_Nonce;
+    uint8_t u8_ClientType;
     
 protected:
 

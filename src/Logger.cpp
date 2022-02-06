@@ -40,7 +40,7 @@
     #define MRH_NET_SERVER_BACKTRACE_FILE_PATH "/var/log/bt_mrhnetserver.log"
 #endif
 #ifndef MRH_LOGGER_PRINT_CLI
-    #define MRH_LOGGER_PRINT_CLI 0
+    #define MRH_LOGGER_PRINT_CLI 1//0
 #endif
 
 
