@@ -1,5 +1,5 @@
 /**
- *  ConnectionMain.h
+ *  ThreadShared.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,31 +19,58 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef ConnectionMain_h
-#define ConnectionMain_h
+#ifndef ThreadShared_h
+#define ThreadShared_h
 
 // C / C++
 
 // External
 
 // Project
-#include "../Configuration.h"
+#include "../Exception.h"
 
 
-namespace ConnectionMain
+class ThreadShared
 {
+public:
+    
     //*************************************************************************************
-    // Run
+    // Constructor / Destructor
     //*************************************************************************************
     
     /**
-     *  Run as connection server.
+     *  Copy constructor. Disabled for this class.
      *
-     *  \param c_Config The server configuration to use.
-     *  \param b_Run The server run flag.
+     *  \param c_ThreadShared ThreadShared class source.
      */
     
-    void Run(Configuration& c_Config, bool& b_Run);
+    ThreadShared(ThreadShared const& s_ThreadShared) = delete;
+    
+    /**
+     *  Default destructor.
+     */
+    
+    virtual ~ThreadShared() noexcept
+    {}
+    
+private:
+    
+    //*************************************************************************************
+    // Data
+    //*************************************************************************************
+    
+protected:
+    
+    //*************************************************************************************
+    // Constructor
+    //*************************************************************************************
+    
+    /**
+     *  Default constructor.
+     */
+    
+    ThreadShared() noexcept
+    {}
 };
 
-#endif /* ConnectionMain_h */
+#endif /* ThreadShared_h */

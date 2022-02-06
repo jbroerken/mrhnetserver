@@ -1,5 +1,5 @@
 /**
- *  Timer.cpp
+ *  MsQuic.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,56 +19,70 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef MsQuic_h
+#define MsQuic_h
+
 // C / C++
 
 // External
+#include <msquic.h>
 
 // Project
-#include "./Timer.h"
-
-// Pre-defined
-using namespace std::chrono;
 
 
 //*************************************************************************************
-// Constructor / Destructor
+// Listener
 //*************************************************************************************
 
-Timer::Timer() noexcept
-{}
+/**
+ *  MsQuic server listener callback.
+ *
+ *  \param Listener The used listener.
+ *  \param Context The provided listener context.
+ *  \param Event The recieved listener event.
+ *
+ *  \return The callback result.
+ */
 
-Timer::~Timer() noexcept
-{}
+_IRQL_requires_max_(PASSIVE_LEVEL)
+_Function_class_(QUIC_LISTENER_CALLBACK)
+QUIC_STATUS QUIC_API ListenerCallback(_In_ HQUIC Listener, _In_opt_ void* Context, _Inout_ QUIC_LISTENER_EVENT* Event);
 
 //*************************************************************************************
-// Set
+// Connection
 //*************************************************************************************
 
-void Timer::Set(uint32_t u32_MS) noexcept
-{
-    c_EndTime = system_clock::now() + milliseconds(u32_MS);
-}
+/**
+ *  MsQuic server connection callback.
+ *
+ *  \param Connection The connection for the callback.
+ *  \param Context The provided connection context.
+ *  \param Event The recieved connection event.
+ *
+ *  \return The callback result.
+ */
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+_Function_class_(QUIC_CONNECTION_CALLBACK)
+QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Context, _Inout_ QUIC_CONNECTION_EVENT* Event);
 
 //*************************************************************************************
-// Getters
+// Stream
 //*************************************************************************************
 
-bool Timer::GetFinished() noexcept
-{
-    if (system_clock::now() < c_EndTime)
-    {
-        return false;
-    }
-    
-    return true;
-}
+/**
+ *  MsQuic server stream callback.
+ *
+ *  \param Stream The stream for the callback.
+ *  \param Context The provided stream context.
+ *  \param Event The recieved stream event.
+ *
+ *  \return The callback result.
+ */
 
-std::chrono::milliseconds Timer::GetTimeRemaining() noexcept
-{
-    if (system_clock::now() < c_EndTime)
-    {
-        return duration_cast<milliseconds>(c_EndTime - system_clock::now());
-    }
-    
-    return milliseconds(0);
-}
+_IRQL_requires_max_(DISPATCH_LEVEL)
+_Function_class_(QUIC_STREAM_CALLBACK)
+QUIC_STATUS QUIC_API StreamCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event);
+
+
+#endif /* MsQuic_h */

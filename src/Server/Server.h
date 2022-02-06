@@ -1,5 +1,5 @@
 /**
- *  NetServer.h
+ *  Server.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,24 +19,19 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef NetServer_h
-#define NetServer_h
+#ifndef Server_h
+#define Server_h
 
 // C / C++
-#include <list>
-#include <memory>
-#include <string>
 
 // External
 
 // Project
-#include "./NetConnection.h"
+#include "../Job/JobList.h"
+#include "./MsQuic/ListenerContext.h"
 
 
-struct MsQuicListenerContext;
-
-
-class NetServer
+class Server
 {
 public:
     
@@ -46,26 +41,28 @@ public:
     
     /**
      *  Default constructor.
+     *
+     *  \param c_JobList The job list to add connections to.
      */
     
-    NetServer();
+    Server(JobList& c_JobList);
     
     /**
      *  Copy constructor. Disabled for this class.
      *
-     *  \param c_NetServer NetServer class source.
+     *  \param c_Server Server class source.
      */
     
-    NetServer(NetServer const& c_NetServer) = delete;
+    Server(Server const& c_Server) = delete;
     
     /**
      *  Default destructor.
      */
     
-    ~NetServer() noexcept;
+    ~Server() noexcept;
     
     //*************************************************************************************
-    // Run
+    // Start
     //*************************************************************************************
     
     /**
@@ -80,23 +77,15 @@ public:
     
     void Start(int i_Port, std::string const& s_CertFilePath, std::string const& s_KeyFilePath, int i_TimeoutS, int i_MaxClientCount);
     
+    //*************************************************************************************
+    // Stop
+    //*************************************************************************************
+    
     /**
      *  Stop accepting connections.
      */
     
     void Stop() noexcept;
-    
-    //*************************************************************************************
-    // Getters
-    //*************************************************************************************
-    
-    /**
-     *  Get all newly available connections.
-     *
-     *  \return All newly available connections.
-     */
-    
-    std::list<std::unique_ptr<NetConnection>> GetConnections() noexcept;
     
 private:
     
@@ -104,16 +93,21 @@ private:
     // Data
     //*************************************************************************************
     
-    const void* p_APITable;
-    void* p_Registration;
-    void* p_Listener;
+    // Job List
+    JobList& c_JobList;
     
-    MsQuicListenerContext* p_Context;
+    // MsQuic
+    const QUIC_API_TABLE* p_APITable;
+    HQUIC p_Registration;
+    HQUIC p_Listener;
     
+    ListenerContext* p_Context;
+    
+    // Running
     bool b_Started;
     
 protected:
 
 };
 
-#endif /* NetServer_h */
+#endif /* Server_h */

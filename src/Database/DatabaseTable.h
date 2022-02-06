@@ -128,101 +128,45 @@ namespace DatabaseTable
     };
     
     //*************************************************************************************
-    // Channel List Table
+    // Message Data Table
     //*************************************************************************************
     
     /**
      *  Table Name
      */
     
-    constexpr const char* p_SLTableName = "server_list";
+    constexpr const char* p_MDTableName = "message_data";
     
     /**
      *  Field Names
      */
     
-    enum SLFields
+    enum MDFields
     {
-        SL_SERVER_ID = 0,
-        SL_CHANNEL = 1,
-        SL_ADDRESS = 2,
-        SL_PORT = 3,
-        SL_ASSISTANT_CONNECTIONS = 4,
-        SL_MAX_CONNECTIONS = 5,
-        SL_LAST_UPDATE = 6,
+        MD_USER_ID = 0,
+        MD_DEVICE_KEY = 1,
+        MD_ACTOR_TYPE = 2,
+        MD_MESSAGE_TYPE = 3,
+        MD_MESSAGE_DATA = 4,
         
-        SL_FIELDS_MAX = SL_LAST_UPDATE,
-        SL_FIELDS_COUNT = SL_FIELDS_MAX + 1
+        MD_FIELDS_MAX = MD_MESSAGE_DATA,
+        MD_FIELDS_COUNT = MD_FIELDS_MAX + 1
     };
     
-    constexpr const char* p_SLFieldName[SL_FIELDS_COUNT] =
+    constexpr const char* p_MDFieldName[MD_FIELDS_COUNT] =
     {
-        "server_id",
-        "channel",
-        "address",
-        "port",
-        "assistant_connections",
-        "max_connections",
-        "last_update_s"
-    };
-    
-    /**
-     *  Row Data
-     */
-    
-    struct SLRow
-    {
-    public:
-        
-        //*************************************************************************************
-        // Data
-        //*************************************************************************************
-        
-        uint32_t u32_ServerID;
-        std::string s_Name;
-        std::string s_Address;
-        int32_t s32_Port;
-        uint32_t u32_AssistantConnections;
-        uint32_t u32_MaxConnections;
-        uint64_t u64_LastUpdate;
-    };
-    
-    //*************************************************************************************
-    // Server Platform Connections Table
-    //*************************************************************************************
-    
-    /**
-     *  Table Name
-     */
-    
-    constexpr const char* p_SPCTableName = "server_platform_connections";
-    
-    /**
-     *  Field Names
-     */
-    
-    enum SPCFields
-    {
-        SPC_SERVER_ID = 0,
-        SPC_USER_ID = 1,
-        SPC_DEVICE_KEY = 2,
-        
-        SPC_FIELDS_MAX = SPC_DEVICE_KEY,
-        SPC_FIELDS_COUNT = SPC_FIELDS_MAX + 1
-    };
-    
-    constexpr const char* p_SPCFieldName[SPC_FIELDS_COUNT] =
-    {
-        "server_id",
         "user_id",
-        "device_key"
+        "device_key",
+        "actor_type",
+        "message_type",
+        "message_data"
     };
     
     /**
      *  Row Data
      */
     
-    struct SPCRow
+    struct MDRow
     {
     public:
         
@@ -230,9 +174,11 @@ namespace DatabaseTable
         // Data
         //*************************************************************************************
         
-        uint32_t u32_ServerID;
         uint32_t u32_UserID;
         std::string s_DeviceKey;
+        uint8_t u8_ActorType;
+        uint8_t u8_MessageType;
+        std::string s_MessageData;
     };
 }
 

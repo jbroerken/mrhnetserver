@@ -1,5 +1,5 @@
 /**
- *  NetServer.cpp
+ *  Server.cpp
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -24,8 +24,8 @@
 // External
 
 // Project
-#include "./NetServer.h"
-#include "./MsQuic.h"
+#include "./Server.h"
+#include "./MsQuic/MsQuic.h"
 
 // Pre-defined
 #ifndef MRH_SRV_REGISTRATION_NAME
@@ -34,8 +34,8 @@
 #ifndef MRH_SRV_ALPN_NAME
     #define MRH_SRV_ALPN_NAME "mrh_srv_alpn"
 #endif
-#ifndef CLIENT_STREAMS_PER_DIRECTION
-    #define CLIENT_STREAMS_PER_DIRECTION 32 // Client limit, use it to define max stream count
+#ifndef CLIENT_STREAMS_MULTIPLIER
+    #define CLIENT_STREAMS_MULTIPLIER 128 // Client Limit * Streams per Client (expected)
 #endif
 
 
@@ -43,7 +43,8 @@
 // Constructor / Destructor
 //*************************************************************************************
 
-NetServer::NetServer() : b_Started(false)
+Server::Server(JobList& c_JobList) : c_JobList(c_JobList),
+                                     b_Started(false)
 {
     QUIC_STATUS ui_Status;
     HQUIC p_Registration;
@@ -55,13 +56,13 @@ NetServer::NetServer() : b_Started(false)
     
     if (QUIC_FAILED(ui_Status = MsQuicOpen(&p_APITable)))
     {
-        throw NetException("Failed to get msquic api table!");
+        throw Exception("Failed to get msquic api table!");
     }
     else if (QUIC_FAILED(ui_Status = ((const QUIC_API_TABLE*)p_APITable)->RegistrationOpen(&c_RegistrationConfig,
                                                                                            &p_Registration)))
     {
         MsQuicClose(p_APITable);
-        throw NetException("Failed to get msquic registration!");
+        throw Exception("Failed to get msquic registration!");
     }
     else
     {
@@ -69,7 +70,7 @@ NetServer::NetServer() : b_Started(false)
     }
 }
 
-NetServer::~NetServer() noexcept
+Server::~Server() noexcept
 {
     if (p_APITable == NULL)
     {
@@ -90,10 +91,10 @@ NetServer::~NetServer() noexcept
 }
 
 //*************************************************************************************
-// Run
+// Start
 //*************************************************************************************
 
-void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string const& s_KeyFilePath, int i_TimeoutS, int i_MaxClientCount)
+void Server::Start(int i_Port, std::string const& s_CertFilePath, std::string const& s_KeyFilePath, int i_TimeoutS, int i_MaxClientCount)
 {
     if (b_Started == true)
     {
@@ -101,11 +102,11 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     }
     else if (p_APITable == NULL)
     {
-        throw NetException("No API table to use!");
+        throw Exception("No API table to use!");
     }
     else if (i_MaxClientCount < 1)
     {
-        throw NetException("Server has invalid client connection count!");
+        throw Exception("Server has invalid client connection count!");
     }
     
     //
@@ -121,8 +122,6 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
             QUIC_CERTIFICATE_FILE_PROTECTED CertFileProtected;
         };
     };
-    
-    const QUIC_API_TABLE* p_MsQuic = (const QUIC_API_TABLE*)p_APITable;
     
     HQUIC p_Configuration;
     HQUIC p_Listener;
@@ -155,12 +154,10 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     c_Settings.IsSet.IdleTimeoutMs = TRUE;
     c_Settings.ServerResumptionLevel = QUIC_SERVER_NO_RESUME;//QUIC_SERVER_RESUME_AND_ZERORTT;
     c_Settings.IsSet.ServerResumptionLevel = TRUE;
-    c_Settings.PeerUnidiStreamCount = i_MaxClientCount * CLIENT_STREAMS_PER_DIRECTION * 2; // Connections * Connection Streams * To/From
+    c_Settings.PeerUnidiStreamCount = i_MaxClientCount * CLIENT_STREAMS_MULTIPLIER;
     c_Settings.IsSet.PeerUnidiStreamCount = TRUE;
-    c_Settings.KeepAliveIntervalMs = c_Settings.IdleTimeoutMs / 2;
-    c_Settings.IsSet.KeepAliveIntervalMs = TRUE;
-    //c_Settings.PeerBidiStreamCount = 1024;
-    //c_Settings.IsSet.PeerBidiStreamCount = TRUE;
+    //c_Settings.KeepAliveIntervalMs = c_Settings.IdleTimeoutMs / 2;
+    //c_Settings.IsSet.KeepAliveIntervalMs = TRUE;
 
     c_Config.CertFile.CertificateFile = (char*)s_CertFilePath.c_str();
     c_Config.CertFile.PrivateKeyFile = (char*)s_KeyFilePath.c_str();
@@ -168,22 +165,22 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     c_Config.CredConfig.Type = QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE;
     c_Config.CredConfig.CertificateFile = &c_Config.CertFile;
     
-    if (QUIC_FAILED(ui_Status = p_MsQuic->ConfigurationOpen((HQUIC)p_Registration,
-                                                            &p_Alpn,
-                                                            1,
-                                                            &c_Settings,
-                                                            sizeof(c_Settings),
-                                                            NULL,
-                                                            &p_Configuration)))
+    if (QUIC_FAILED(ui_Status = p_APITable->ConfigurationOpen(p_Registration,
+                                                              &p_Alpn,
+                                                              1,
+                                                              &c_Settings,
+                                                              sizeof(c_Settings),
+                                                              NULL,
+                                                              &p_Configuration)))
     {
-        throw NetException("Failed to open configuration!");
+        throw Exception("Failed to open configuration!");
     }
-    else if (QUIC_FAILED(ui_Status = p_MsQuic->ConfigurationLoadCredential(p_Configuration,
-                                                                           &c_Config.CredConfig)))
+    else if (QUIC_FAILED(ui_Status = p_APITable->ConfigurationLoadCredential(p_Configuration,
+                                                                             &c_Config.CredConfig)))
     {
-        p_MsQuic->ConfigurationClose(p_Configuration);
+        p_APITable->ConfigurationClose(p_Configuration);
         
-        throw NetException("Failed to load configuration credentials!");
+        throw Exception("Failed to load configuration credentials!");
     }
     
     //
@@ -192,15 +189,16 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     
     try
     {
-        p_Context = new MsQuicListenerContext(p_MsQuic,
-                                              p_Configuration,
-                                              i_MaxClientCount);
+        p_Context = new ListenerContext(p_APITable,
+                                        p_Configuration,
+                                        c_JobList,
+                                        i_MaxClientCount);
     }
     catch (...)
     {
-        p_MsQuic->ConfigurationClose(p_Configuration);
+        p_APITable->ConfigurationClose(p_Configuration);
         
-        throw NetException("Failed to create listener context!");
+        throw Exception("Failed to create listener context!");
     }
     
     // We need to open a listener for connections, which then starts listening
@@ -208,32 +206,32 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     //        which in turn calls the blocking call ListenerStop().
     //        MsQuic guarantees no callbacks after ListenerClose(), which means
     //        that the context object will never be used in callbacks after stopping!
-    if (QUIC_FAILED(ui_Status = p_MsQuic->ListenerOpen((HQUIC)p_Registration,
-                                                       MsQuicListenerCallback,
-                                                       p_Context,
-                                                       &p_Listener)))
+    if (QUIC_FAILED(ui_Status = p_APITable->ListenerOpen(p_Registration,
+                                                         ListenerCallback,
+                                                         p_Context,
+                                                         &p_Listener)))
     {
         delete p_Context;
         p_Context = NULL;
         
-        p_MsQuic->ConfigurationClose(p_Configuration);
+        p_APITable->ConfigurationClose(p_Configuration);
         
-        throw NetException("Failed to open server listener!");
+        throw Exception("Failed to open server listener!");
     }
     
     // Setup completed, start listening
-    if (QUIC_FAILED(ui_Status = p_MsQuic->ListenerStart(p_Listener,
-                                                        &p_Alpn,
-                                                        1,
-                                                        &c_Address)))
+    if (QUIC_FAILED(ui_Status = p_APITable->ListenerStart(p_Listener,
+                                                          &p_Alpn,
+                                                          1,
+                                                          &c_Address)))
     {
         delete p_Context;
         p_Context = NULL;
         
-        p_MsQuic->ListenerClose(p_Listener);
-        p_MsQuic->ConfigurationClose(p_Configuration);
+        p_APITable->ListenerClose(p_Listener);
+        p_APITable->ConfigurationClose(p_Configuration);
         
-        throw NetException("Failed to start server listener!");
+        throw Exception("Failed to start server listener!");
     }
     
     this->p_Listener = p_Listener;
@@ -242,66 +240,22 @@ void NetServer::Start(int i_Port, std::string const& s_CertFilePath, std::string
     b_Started = true;
 }
 
-void NetServer::Stop() noexcept
+//*************************************************************************************
+// Stop
+//*************************************************************************************
+
+void Server::Stop() noexcept
 {
     if (b_Started == false)
     {
         return;
     }
     
-    // @NOTE: At this point all pointers are valid!
-    const QUIC_API_TABLE* p_MsQuic = (const QUIC_API_TABLE*)p_APITable;
-    
-    p_MsQuic->ListenerClose((HQUIC)p_Listener);
-    p_MsQuic->ConfigurationClose(p_Context->p_Configuration);
-    
-    p_Listener = NULL;
+    p_APITable->ListenerClose(p_Listener);
+    p_APITable->ConfigurationClose(p_Context->p_Configuration);
     
     delete p_Context;
     p_Context = NULL;
     
     b_Started = false;
-}
-
-//*************************************************************************************
-// Getters
-//*************************************************************************************
-
-std::list<std::unique_ptr<NetConnection>> NetServer::GetConnections() noexcept
-{
-    std::list<std::unique_ptr<NetConnection>> l_Result;
-    
-    std::lock_guard<std::mutex> c_Guard(p_Context->c_Mutex);
-    
-    for (auto& Connection : p_Context->l_Connection)
-    {
-        try
-        {
-            // @NOTE: No owner modification, owner switches from net server
-            //        to pointer!
-            NetConnection* p_Connection = new NetConnection(Connection);
-            l_Result.emplace_back(p_Connection);
-        }
-        catch (...)
-        {
-            if (Connection->b_Shared == false)
-            {
-                // @NOTE: Already closed at this point
-                //printf("\n(NetServer) Delete Context [ %p ]\n", Connection->p_Connection);
-                delete Connection;
-            }
-            else
-            {
-                //printf("\n(NetServer) Shutdown Connection [ %p ]\n", Connection->p_Connection);
-                Connection->b_Shared = false;
-                p_Context->p_APITable->ConnectionShutdown(Connection->p_Connection,
-                                                          QUIC_CONNECTION_SHUTDOWN_FLAG_NONE,
-                                                          0);
-            }
-        }
-    }
-    
-    p_Context->l_Connection.clear();
-    
-    return l_Result; // Force move
 }

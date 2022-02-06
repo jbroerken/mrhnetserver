@@ -29,7 +29,7 @@
 // External
 
 // Project
-#include "./NetException.h"
+#include "../Exception.h"
 
 
 class NetMessage
@@ -41,7 +41,7 @@ public:
     //*************************************************************************************
     
     // Full unencrypted size
-    static constexpr size_t us_BufferSize = 1024;
+    static constexpr size_t us_BufferSizeMax = 1024;
     
     // @NOTE: We want our ids to be 1 byte long at most (unsigned)
     //        Most ids are simply checked for their range and then handed off
@@ -62,42 +62,27 @@ public:
          */
         
         // Unk
-        CS_MSG_UNK = 0,                     // All - Unknown / Error
-        
-        // Availability
-        S_MSG_PARTNER_CLOSED = 1,           // Server - A client closed connection (for other clients, etc.)
+        MSG_UNK = 0,                        // Unknown / Error
         
         // Server Auth
-        C_MSG_AUTH_REQUEST = 2,             // Client - Request authentication
-        S_MSG_AUTH_CHALLENGE = 3,           // Server - Challenge client to provide auth data
-        C_MSG_AUTH_PROOF = 4,               // Client - Provide proof of valid auth data
-        S_MSG_AUTH_RESULT = 5,              // Server - Proof check result
+        MSG_AUTH_REQUEST = 1,               // Request authentication
+        MSG_AUTH_CHALLENGE = 2,             // Challenge client to provide auth data
+        MSG_AUTH_PROOF = 3,                 // Provide proof of valid auth data
+        MSG_AUTH_RESULT = 4,                // Auth result
         
-        // Device Pairing
-        C_MSG_PAIR_REQUEST = 6,             // Client - Request pairing with platform client
-        C_MSG_PAIR_CHALLENGE = 7,           // Client - Give nonce to app client to hash
-        C_MSG_PAIR_PROOF,                   // Client - Return the hashed nonce to platform client
-        C_MSG_PAIR_RESULT,                  // Client - Result of pairing with platform client
-        
-        // Channel
-        C_MSG_CHANNEL_REQUEST,              // Client - Request channel info
-        S_MSG_CHANNEL_RESPONSE,             // Server - Provide channel info
-        
-        // Text
-        C_MSG_TEXT,                         // Client - Send text string
-        
-        // Location
-        C_MSG_LOCATION,                     // Client - Send location data
-        
-        // Custom
-        C_MSG_CUSTOM,                       // Client - Custom message
-        CS_MSG_CUSTOM,                      // All - Custom message
+        // Communication
+        MSG_DATA_AVAIL = 5,                 // Client requests data
+        MSG_NO_DATA = 6,                    // No data available
+        MSG_TEXT,                           // Text data
+        MSG_LOCATION,                       // Location data
+        MSG_NOTIFICATION,                   // Push notification
+        MSG_CUSTOM,                         // Custom data
         
         /**
          *  Bounds
          */
         
-        NET_MESSAGE_LIST_MAX = CS_MSG_CUSTOM,
+        NET_MESSAGE_LIST_MAX = MSG_CUSTOM,
         
         NET_MESSAGE_LIST_COUNT = NET_MESSAGE_LIST_MAX + 1
     };
@@ -118,23 +103,15 @@ public:
         ERR_SG_ERROR = 2,                   // Internal server error
         
         // Server Auth
-        ERR_SA_NO_DEVICE = 3,               // No device found for device key
-        ERR_SA_VERSION = 4,                 // Wrong OpCode Version
-        ERR_SA_UNK_ACTOR = 5,               // Unknown actor id
-        ERR_SA_ACCOUNT = 6,                 // Account data given was wrong
-        ERR_SA_ALREADY_CONNECTED = 7,       // Connection already exists
-        ERR_SA_MAINTENANCE,                 // Temporary downtime
-        
-        // Channel
-        ERR_CR_NO_CHANNEL,                  // No channel was found for identifier
-        ERR_CR_FULL,                        // All channels are full
-        ERR_CR_NO_PLATFORM,                 // No platform client found for app client
-        
-        // Device Auth
-        ERR_DA_PAIR,                        // Device pairing failed
+        ERR_SA_VERSION = 3,                 // Wrong OpCode Version
+        ERR_SA_ACCOUNT = 4,                 // Account data given was wrong
+        ERR_SA_ALREADY_CONNECTED = 5,       // Connection already exists
+        ERR_SA_MAINTENANCE = 6,             // Temporary downtime
+        ERR_SA_UNK_ACTOR = 7,               // Unknown actor type
+        ERR_SA_NO_DEVICE,                   // No device found for connection
         
         // Bounds
-        NET_MESSAGE_ERROR_MAX = ERR_DA_PAIR,
+        NET_MESSAGE_ERROR_MAX = ERR_SA_NO_DEVICE,
         
         NET_MESSAGE_ERROR_COUNT = NET_MESSAGE_ERROR_MAX + 1
     };
@@ -184,14 +161,6 @@ public:
      */
     
     NetMessageList GetID() const noexcept;
-    
-    /**
-     *  Check if the net message is encrypted.
-     *
-     *  \return true if encrypted, false if not.
-     */
-    
-    bool GetEncrypted() const noexcept;
     
     //*************************************************************************************
     // Data

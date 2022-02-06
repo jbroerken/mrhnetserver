@@ -42,19 +42,46 @@
 
 using namespace NetMessageV1;
 
+namespace
+{
+    // Data Creation
+    constexpr size_t us_MsgAuthRequestSize = NetMessage::us_DataPos +
+                                             us_SizeAccountMail +
+                                             us_SizeDeviceKey +
+                                             sizeof(uint8_t) +      /* Client Type */
+                                             sizeof(uint8_t);       /* Net Message Version */
+    constexpr size_t us_MsgAuthProofSize = NetMessage::us_DataPos +
+                                           us_SizeNonceHash;
+    constexpr size_t us_MsgDataAvailSize = NetMessage::us_DataPos +
+                                           sizeof(uint8_t);         /* Data Type */
+    constexpr size_t us_MsgNotificationSize = NetMessage::us_DataPos +
+                                              us_SizeNotificationString;
+    
+    // Buffer Creation
+    constexpr size_t us_MsgAuthChallengeSize = NetMessage::us_DataPos +
+                                               us_SizeAccountPasswordSalt +
+                                               sizeof(uint32_t) +   /* Nonce */
+                                               sizeof(uint8_t);     /* Hash Type */
+    constexpr size_t us_MsgAuthSateSize = NetMessage::us_DataPos +
+                                          sizeof(uint8_t);          /* Auth State Result */
+    constexpr size_t us_MsgNoDataSize = NetMessage::us_DataPos +
+                                        sizeof(uint8_t);            /* Data Type */
+    
+}
+
 
 //*************************************************************************************
 // Data Creation
 //*************************************************************************************
 
-template<> C_MSG_AUTH_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
+template<> MSG_AUTH_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
 {
-    if (v_Buffer.size() < NetMessage::us_BufferSize)
+    if (v_Buffer.size() != us_MsgAuthRequestSize)
     {
-        throw NetException("Invalid data buffer!");
+        throw Exception("Invalid data buffer!");
     }
     
-    C_MSG_AUTH_REQUEST_DATA c_Data;
+    MSG_AUTH_REQUEST_DATA c_Data;
     size_t us_Pos = NetMessage::us_IDPos + NetMessage::us_IDSize;
     
     memcpy(&(c_Data.p_Mail[0]),
@@ -67,7 +94,7 @@ template<> C_MSG_AUTH_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> con
            us_SizeDeviceKey);
     us_Pos += us_SizeDeviceKey;
     
-    c_Data.u8_Actor = v_Buffer[us_Pos];
+    c_Data.u8_ClientType = v_Buffer[us_Pos];
     us_Pos += 1;
     
     c_Data.u8_Version = v_Buffer[us_Pos];
@@ -75,37 +102,51 @@ template<> C_MSG_AUTH_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> con
     return c_Data;
 }
 
-template<> C_MSG_AUTH_PROOF_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
+template<> MSG_AUTH_PROOF_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
 {
-    if (v_Buffer.size() < NetMessage::us_BufferSize)
+    if (v_Buffer.size() != us_MsgAuthProofSize)
     {
-        throw NetException("Invalid data buffer!");
+        throw Exception("Invalid data buffer!");
     }
     
-    C_MSG_AUTH_PROOF_DATA c_Data;
+    MSG_AUTH_PROOF_DATA c_Data;
     size_t us_Pos = NetMessage::us_IDPos + NetMessage::us_IDSize;
     
     memcpy(&(c_Data.p_NonceHash[0]),
            &(v_Buffer[us_Pos]),
            us_SizeNonceHash);
-    us_Pos += us_SizeNonceHash;
     
     return c_Data;
 }
 
-template<> C_MSG_CHANNEL_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
+template<> MSG_DATA_AVAIL_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
 {
-    if (v_Buffer.size() < NetMessage::us_BufferSize)
+    if (v_Buffer.size() != us_MsgDataAvailSize)
     {
-        throw NetException("Invalid data buffer!");
+        throw Exception("Invalid data buffer!");
     }
     
-    C_MSG_CHANNEL_REQUEST_DATA c_Data;
+    MSG_DATA_AVAIL_DATA c_Data;
     size_t us_Pos = NetMessage::us_IDPos + NetMessage::us_IDSize;
     
-    memcpy(&(c_Data.p_Channel[0]),
+    c_Data.u8_Data = v_Buffer[us_Pos];
+    
+    return c_Data;
+}
+
+template<> MSG_NOTIFICATION_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
+{
+    if (v_Buffer.size() != us_MsgNotificationSize)
+    {
+        throw Exception("Invalid data buffer!");
+    }
+    
+    MSG_NOTIFICATION_DATA c_Data;
+    size_t us_Pos = NetMessage::us_IDPos + NetMessage::us_IDSize;
+    
+    memcpy(&(c_Data.p_String[0]),
            &(v_Buffer[us_Pos]),
-           us_SizeServerChannel);
+           us_SizeNotificationString);
     
     return c_Data;
 }
@@ -114,12 +155,12 @@ template<> C_MSG_CHANNEL_REQUEST_DATA NetMessageV1::ToData(std::vector<uint8_t> 
 // Buffer Creation
 //*************************************************************************************
 
-template<> std::vector<uint8_t> NetMessageV1::ToBuffer(S_MSG_AUTH_CHALLENGE_DATA const& Data)
+template<> std::vector<uint8_t> NetMessageV1::ToBuffer(MSG_AUTH_CHALLENGE_DATA const& Data)
 {
-    std::vector<uint8_t> v_Buffer(NetMessage::us_BufferSize, '\0');
+    std::vector<uint8_t> v_Buffer(us_MsgAuthChallengeSize, '\0');
     size_t us_Pos = NetMessage::us_IDPos;
     
-    v_Buffer[NetMessage::us_IDPos] = NetMessage::S_MSG_AUTH_CHALLENGE;
+    v_Buffer[NetMessage::us_IDPos] = NetMessage::MSG_AUTH_CHALLENGE;
     us_Pos += NetMessage::us_IDSize;
     
     memcpy(&(v_Buffer[us_Pos]),
@@ -149,12 +190,12 @@ template<> std::vector<uint8_t> NetMessageV1::ToBuffer(S_MSG_AUTH_CHALLENGE_DATA
     return v_Buffer;
 }
 
-template<> std::vector<uint8_t> NetMessageV1::ToBuffer(S_MSG_AUTH_RESULT_DATA const& Data)
+template<> std::vector<uint8_t> NetMessageV1::ToBuffer(MSG_AUTH_RESULT_DATA const& Data)
 {
-    std::vector<uint8_t> v_Buffer(NetMessage::us_BufferSize, '\0');
+    std::vector<uint8_t> v_Buffer(us_MsgAuthSateSize, '\0');
     size_t us_Pos = NetMessage::us_IDPos;
     
-    v_Buffer[NetMessage::us_IDPos] = NetMessage::S_MSG_AUTH_RESULT;
+    v_Buffer[NetMessage::us_IDPos] = NetMessage::MSG_AUTH_RESULT;
     us_Pos += NetMessage::us_IDSize;
     
     v_Buffer[us_Pos] = Data.u8_Result;
@@ -162,42 +203,15 @@ template<> std::vector<uint8_t> NetMessageV1::ToBuffer(S_MSG_AUTH_RESULT_DATA co
     return v_Buffer;
 }
 
-template<> std::vector<uint8_t> NetMessageV1::ToBuffer(S_MSG_CHANNEL_RESPONSE_DATA const& Data)
+template<> std::vector<uint8_t> NetMessageV1::ToBuffer(MSG_NO_DATA_DATA const& Data)
 {
-    std::vector<uint8_t> v_Buffer(NetMessage::us_BufferSize, '\0');
+    std::vector<uint8_t> v_Buffer(us_MsgNoDataSize, '\0');
     size_t us_Pos = NetMessage::us_IDPos;
     
-    v_Buffer[NetMessage::us_IDPos] = NetMessage::S_MSG_CHANNEL_RESPONSE;
+    v_Buffer[NetMessage::us_IDPos] = NetMessage::MSG_NO_DATA;
     us_Pos += NetMessage::us_IDSize;
     
-    memcpy(&(v_Buffer[us_Pos]),
-           &(Data.p_Channel[0]),
-           us_SizeServerChannel);
-    us_Pos += us_SizeServerChannel;
-    
-    memcpy(&(v_Buffer[us_Pos]),
-           &(Data.p_Address[0]),
-           us_SizeServerAddress);
-    us_Pos += us_SizeServerAddress;
-    
-    if (IS_BIG_ENDIAN)
-    {
-        uint32_t u32_Port = bswap_32(Data.u32_Port);
-    
-        memcpy(&(v_Buffer[us_Pos]),
-               &u32_Port,
-               sizeof(u32_Port));
-    }
-    else
-    {
-        memcpy(&(v_Buffer[us_Pos]),
-               &(Data.u32_Port),
-               sizeof(Data.u32_Port));
-    }
-    
-    us_Pos += sizeof(Data.u32_Port);
-    
-    v_Buffer[us_Pos] = Data.u8_Result;
+    v_Buffer[us_Pos] = Data.u8_Data;
     
     return v_Buffer;
 }

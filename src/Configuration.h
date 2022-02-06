@@ -29,7 +29,7 @@
 // External
 
 // Project
-#include "./ServerException.h"
+#include "./Exception.h"
 
 
 class Configuration
@@ -59,18 +59,11 @@ public:
     //*************************************************************************************
     
     // Shared
-    ActorType e_Type;
-    
     int i_Port;
-    
     std::string s_CertFilePath;
     std::string s_KeyFilePath;
-    
     int i_MaxClientCount;
-    
     int i_ConnectionTimeoutS;
-    int i_ConnectionPulseMS;
-    int i_MessagePulseMS;
     
     // MySQL
     std::string s_MySQLAddress;
@@ -78,11 +71,6 @@ public:
     std::string s_MySQLUser;
     std::string s_MySQLPassword;
     std::string s_MySQLDatabase;
-    
-    // Connection Server
-    
-    // Communication Server
-    int i_ServerID;
     
 private:
     

@@ -1,5 +1,5 @@
 /**
- *  ExchangeContainer.h
+ *  JobList.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,22 +19,24 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef ExchangeContainer_h
-#define ExchangeContainer_h
+#ifndef JobList_h
+#define JobList_h
 
 // C / C++
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include <memory>
-#include <unordered_map>
 #include <deque>
 
 // External
 
 // Project
-#include "./MessageExchange.h"
-#include "../ServerException.h"
+#include "./Job.h"
+#include "../Exception.h"
 
 
-class ExchangeContainer
+class JobList
 {
 public:
     
@@ -44,102 +46,120 @@ public:
     
     /**
      *  Default constructor.
-     *
-     *  \param e_Type The type of server actor using the exchange container.
      */
     
-    ExchangeContainer(ActorType e_Type) noexcept;
-    
-    /**
-     *  Copy constructor. Disabled for this class.
-     *
-     *  \param c_ExchangeContainer ExchangeContainer class source.
-     */
-    
-    ExchangeContainer(ExchangeContainer const& c_ExchangeContainer) = delete;
+    JobList() noexcept;
     
     /**
      *  Default destructor.
      */
     
-    ~ExchangeContainer() noexcept;
+    ~JobList() noexcept;
+    
+    //*************************************************************************************
+    // Lock
+    //*************************************************************************************
+    
+    /**
+     *  Lock the list and notify all waiting users about the change.
+     */
+    
+    void Lock() noexcept;
+    
+    /**
+     *  Unlock the list.
+     */
+    
+    void Unlock() noexcept;
     
     //*************************************************************************************
     // Add
     //*************************************************************************************
     
     /**
-     *  Create a message exchange object for two clients. A copy of the exchange object
-     *  is stored in the container for the other client to retrieve.
+     *  Add a job to the job list.
      *
-     *  \param s_DeviceKey The device key for the client pair.
-     *
-     *  \return The created message exchange.
+     *  \param p_Job The job to add.
      */
     
-    std::shared_ptr<MessageExchange> CreateExchange(std::string const& s_DeviceKey);
-    
-    /**
-     *  Add a message exchange object owned by a client to be retrieved by another client.
-     *
-     *  \param p_Exchange The message exchange object.
-     */
-    
-    void AddExchange(std::shared_ptr<MessageExchange> p_Exchange);
-    
-    //*************************************************************************************
-    // Remove
-    //*************************************************************************************
-    
-    /**
-     *  Remove a stored message exchange object.
-     *
-     *  \param s_DeviceKey The device key for the message exchange.
-     */
-    
-    void RemoveExchange(std::string const& s_DeviceKey) noexcept;
+    void AddJob(std::shared_ptr<Job> p_Job);
     
     //*************************************************************************************
     // Getters
     //*************************************************************************************
     
     /**
-     *  Get a stored message exchange object.
+     *  Get a job. This function blocks until a job is available.
      *
-     *  \param s_DeviceKey The device key for the message exchange.
-     *
-     *  \return The matching message exchange object.
+     *  \return The job to perform.
      */
     
-    std::shared_ptr<MessageExchange> GetExchange(std::string const& s_DeviceKey);
+    std::shared_ptr<Job> GetJob();
     
 private:
     
     //*************************************************************************************
-    // Getters
+    // Types
     //*************************************************************************************
     
-    /**
-     *  Create a hash for a device key.
-     *
-     *  \param s_DeviceKey The device key to hash.
-     *
-     *  \return The created hash for the device key.
-     */
-    
-    uint32_t HashDeviceKey(std::string const& s_DeviceKey) noexcept;
+    struct Entry
+    {
+    public:
+        
+        //*************************************************************************************
+        // Constructor / Destructor
+        //*************************************************************************************
+        
+        /**
+         *  Default constructor.
+         */
+            
+        Entry() noexcept;
+        
+        /**
+         *  Job constructor.
+         *
+         *  \param p_Job The job to add.
+         */
+            
+        Entry(std::shared_ptr<Job>& p_Job) noexcept;
+        
+        /**
+         *  Copy constructor. Disabled for this class.
+         *
+         *  \param c_Entry Entry class source.
+         */
+        
+        Entry(Entry const& c_Entry) = delete;
+        
+        /**
+         *  Default destructor.
+         */
+        
+        ~Entry() noexcept;
+        
+        //*************************************************************************************
+        // Data
+        //*************************************************************************************
+        
+        std::mutex c_Mutex;
+        std::shared_ptr<Job> p_Job;
+    };
     
     //*************************************************************************************
     // Data
     //*************************************************************************************
     
-    ActorType e_Type;
-    
-    std::unordered_map<uint32_t, std::deque<std::shared_ptr<MessageExchange>>> m_Exchange;
+    std::condition_variable c_Condition;
     std::mutex c_Mutex;
+    
+    std::deque<Entry> dq_Job;
+    std::atomic<size_t> us_EntryCount; // Job list count
+    
+    std::atomic<bool> b_Locked;
     
 protected:
     
 };
 
-#endif /* ExchangeContainer_h */
+#endif /* JobList_h */

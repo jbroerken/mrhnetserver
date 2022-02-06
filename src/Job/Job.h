@@ -1,5 +1,5 @@
 /**
- *  ServerAuth.h
+ *  Job.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,62 +19,75 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef ServerAuth_h
-#define ServerAuth_h
+#ifndef Job_h
+#define Job_h
 
 // C / C++
-#include <string>
 
 // External
 
 // Project
+#include "./ThreadShared.h"
 
 
-namespace ServerAuth
+class Job
 {
+public:
+    
     //*************************************************************************************
-    // Base64
+    // Constructor / Destructor
     //*************************************************************************************
     
     /**
-     *  Extract the password hash from a base64 password string.
+     *  Copy constructor. Disabled for this class.
      *
-     *  \param s_Base64 The base 64 string to use.
-     *  \param s_Password The password hash to set. Will be set to size
-     *                MRH_NetMessageV1::us_SizeAccountPassword.
+     *  \param c_Job Job class source.
+     */
+    
+    Job(Job const& c_Job) = delete;
+    
+    /**
+     *  Default destructor.
+     */
+    
+    virtual ~Job() noexcept
+    {}
+    
+    //*************************************************************************************
+    // Perform
+    //*************************************************************************************
+    
+    /**
+     *  Perform the job.
+     *
+     *  \param p_Shared Thread shared data.
      *
      *  \return true on success, false on failure.
      */
     
-    bool ExtractPassword(std::string const& s_Base64, std::string& s_Password) noexcept;
+    virtual bool Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
+    {
+        return true;
+    }
     
-    /**
-     *  Extract the salt from a base64 password string.
-     *
-     *  \param s_Base64 The base 64 string to use.
-     *  \param s_Salt The salt to set. Will be set to size
-     *                MRH_NetMessageV1::us_SizeAccountPasswordSalt.
-     *
-     *  \return true on success, false on failure.
-     */
-    
-    bool ExtractSalt(std::string const& s_Base64, std::string& s_Salt) noexcept;
+private:
     
     //*************************************************************************************
-    // Nonce
+    // Data
+    //*************************************************************************************
+    
+protected:
+    
+    //*************************************************************************************
+    // Constructor
     //*************************************************************************************
     
     /**
-     *  Compare a nonce with the content of a encrypted nonce.
-     *
-     *  \param u32_Nonce The nonce to compare with.
-     *  \param p_EncryptedNonce The encrypted none. Needs to be of size
-     *                          MRH_NetMessageV1::us_SizeNonceHash.
-     *  \param p_Key The key to decrypt the nonce with. Needs to be of size
-     *                          MRH_NetMessageV1::us_SizeAccountPassword.
+     *  Default constructor.
      */
     
-    bool CompareNonce(uint32_t u32_Nonce, const uint8_t* p_EncryptedNonce, const char* p_Key) noexcept;
+    Job() noexcept
+    {}
 };
 
-#endif /* ServerAuth_h */
+#endif /* Job_h */

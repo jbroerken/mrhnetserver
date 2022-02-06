@@ -1,5 +1,5 @@
 /**
- *  Timer.h
+ *  ConnectionContext.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,80 +19,62 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef Timer_h
-#define Timer_h
+#ifndef ConnectionContext_h
+#define ConnectionContext_h
 
 // C / C++
-#include <cstdint>
-#include <chrono>
+#include <memory>
 
 // External
+#include <msquic.h>
 
 // Project
+#include "./StreamContext.h"
+#include "./ClientConnections.h"
+#include "../Client.h"
 
 
-class Timer
+struct ConnectionContext
 {
 public:
     
     //*************************************************************************************
-    // Constructor / Destructor
+    // Constructor
     //*************************************************************************************
     
     /**
      *  Default constructor.
-     */
-    
-    Timer() noexcept;
-    
-    /**
-     *  Default destructor.
-     */
-    
-    ~Timer() noexcept;
-    
-    //*************************************************************************************
-    // Set
-    //*************************************************************************************
-    
-    /**
-     *  Set a timer for X milliseconds.
      *
-     *  \param u32_MS The time in milliseconds.
+     *  \param p_APITable The library api table.
+     *  \param p_Connection The connection handle to manage.
+     *  \param c_JobList The job list to hand to the connection.
+     *  \param c_Connections The client connections information.
      */
     
-    void Set(uint32_t u32_MS) noexcept;
-    
-    //*************************************************************************************
-    // Getters
-    //*************************************************************************************
-    
-    /**
-     *  Check if the timer was finished.
-     *
-     *  \return true if finished, false if not.
-     */
-    
-    bool GetFinished() noexcept;
-    
-    /**
-     *  Get the time remaining until the timer is met.
-     *
-     *  \return The time remaining in milliseconds.
-     */
-    
-    std::chrono::milliseconds GetTimeRemaining() noexcept;
-    
-private:
+    ConnectionContext(const QUIC_API_TABLE* p_APITable,
+                      HQUIC p_Connection,
+                      JobList& c_JobList,
+                      ClientConnections& c_Connections) : p_APITable(p_APITable),
+                                                          p_Connection(p_Connection),
+                                                          c_Connections(c_Connections),
+                                                          c_JobList(c_JobList)
+    {
+        p_Client = std::make_shared<Client>(p_APITable,
+                                            p_Connection);
+    }
     
     //*************************************************************************************
     // Data
     //*************************************************************************************
     
-    std::chrono::system_clock::time_point c_EndTime;
+    const QUIC_API_TABLE* p_APITable;
+    HQUIC p_Connection;
     
-protected:
-
+    ClientConnections& c_Connections;
+    std::shared_ptr<Client> p_Client;
+    JobList& c_JobList;
+    
+    std::list<StreamContext> l_Recieved;
 };
 
-#endif /* Timer_h */
+#endif /* ConnectionContext_h */

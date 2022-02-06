@@ -1,5 +1,5 @@
 /**
- *  ServerInfo.h
+ *  StreamContext.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,73 +19,60 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef ServerInfo_h
-#define ServerInfo_h
+#ifndef StreamContext_h
+#define StreamContext_h
 
 // C / C++
-#include <cstdint>
-#include <mutex>
+#include <atomic>
+#include <vector>
+#include <memory>
 
 // External
+#include <msquic.h>
 
 // Project
+#include "./StreamData.h"
+#include "../../Job/JobList.h"
+#include "../Client.h"
 
 
-class ServerInfo
+struct StreamContext
 {
 public:
     
     //*************************************************************************************
-    // Constructor / Destructor
+    // Constructor
     //*************************************************************************************
     
     /**
      *  Default constructor.
      *
-     *  \param u32_ServerID The id for the server.
-     *  \param u32_MaxConnections The max connections combined for the server.
+     *  \param p_APITable The library api table.
+     *  \param p_Connection The connection for this stream.
+     *  \param p_Client The client to recieve and send messages.
+     *  \param c_JobList The job list to hand to the connection.
      */
     
-    ServerInfo(uint32_t u32_ServerID,
-               uint32_t u32_MaxConnections) noexcept : u32_ServerID(u32_ServerID),
-                                                       u32_MaxConnections(u32_MaxConnections)
-    {}
-    
-    /**
-     *  Copy constructor. Disabled for this class.
-     *
-     *  \param c_MessageExchange MessageExchange class source.
-     */
-    
-    ServerInfo(MessageExchange const& c_MessageExchange) = delete;
-    
-    /**
-     *  Default destructor.
-     */
-    
-    ~ServerInfo() noexcept
+    StreamContext(const QUIC_API_TABLE* p_APITable,
+                  HQUIC p_Connection,
+                  std::shared_ptr<Client>& p_Client,
+                  JobList& c_JobList) noexcept : p_APITable(p_APITable),
+                                                 p_Connection(p_Connection),
+                                                 p_Client(p_Client),
+                                                 c_JobList(c_JobList)
     {}
     
     //*************************************************************************************
-    // Data
+    // Types
     //*************************************************************************************
     
-    // Identification
-    const uint32_t u32_ServerID;
-    const uint32_t u32_MaxConnections;
+    const QUIC_API_TABLE* p_APITable;
+    HQUIC p_Connection;
     
-    // Platform Connections
-    uint32_t u32_PlatformConnections;
-    std::mutex c_PCMutex;
+    std::shared_ptr<Client> p_Client;
+    JobList& c_JobList;
     
-    // App Connections
-    uint32_t u32_AppConnections;
-    std::mutex c_ACMutex;
-    
-private:
-    
-protected:
-    
+    StreamData c_Data;
 };
 
-#endif /* ServerInfo_h */
+#endif /* StreamContext_h */

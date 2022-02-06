@@ -30,13 +30,16 @@
 #include <sodium.h>
 
 // Project
-#include "./Connection/ConnectionMain.h"
-#include "./Communication/CommunicationMain.h"
+#include "./Server/Server.h"
+#include "./Database/Database.h"
+#include "./Job/ThreadPool.h"
 #include "./CLI.h"
 #include "./Logger.h"
 #include "./Revision.h"
 
 // Pre-defined
+#define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/Users/Jens/Desktop/mrhnetserver.conf"
+
 #ifndef MRH_SRV_DEFAULT_CONFIG_FILE_PATH
     #define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/usr/local/etc/mrhnetserver.conf"
 #endif
@@ -255,7 +258,15 @@ int main(int argc, const char* argv[])
     // Start server
     try
     {
+        /**
+         *  Configuration
+         */
+        
         Configuration c_Config(s_ConfigPath);
+        
+        /**
+         *  Mode
+         */
         
         // Run as daemon or start cli thread
         if (b_Daemon == true)
@@ -267,29 +278,104 @@ int main(int argc, const char* argv[])
             CLI::Start(c_Config);
         }
         
-        switch (c_Config.e_Type)
+        /**
+         *  Job List
+         */
+        
+        JobList c_JobList;
+        
+        /**
+         *  Server
+         */
+        
+        // Create net server first and start
+        Server c_Server(c_JobList);
+        
+        c_Server.Start(c_Config.i_Port,
+                       c_Config.s_CertFilePath,
+                       c_Config.s_KeyFilePath,
+                       c_Config.i_ConnectionTimeoutS,
+                       c_Config.i_MaxClientCount);
+        
+        /**
+         *  Thread Pool
+         */
+        
+        // Now we need the thread pool
+        std::list<std::unique_ptr<ThreadShared>> l_ThreadInfo;
+        size_t us_ThreadCount = std::thread::hardware_concurrency();
+        
+        if (us_ThreadCount == 0)
         {
-            case SERVER_CONNECTION:
-                c_Logger.Log(Logger::INFO, "Running as connection server.",
-                             "Main.cpp", __LINE__);
-                ConnectionMain::Run(c_Config, b_Run);
-                break;
-            case SERVER_COMMUNICATION:
-                c_Logger.Log(Logger::INFO, "Running as communication server.",
-                             "Main.cpp", __LINE__);
-                CommunicationMain::Run(c_Config, b_Run);
-                break;
-                
-            default:
-                c_Logger.Log(Logger::ERROR, "Unknown server type!",
-                             "Main.cpp", __LINE__);
-                break;
+            us_ThreadCount = 1;
         }
+        else
+        {
+            us_ThreadCount /= 2;
+            
+            if (us_ThreadCount > 1)
+            {
+                // @NOTE: Main acts as a extra thread for the thread pool
+                us_ThreadCount -= 1;
+            }
+        }
+        
+        for (size_t i = 0; i < us_ThreadCount; ++i)
+        {
+            l_ThreadInfo.emplace_back(new Database(c_Config.s_MySQLAddress,
+                                                   c_Config.i_MySQLPort,
+                                                   c_Config.s_MySQLUser,
+                                                   c_Config.s_MySQLPassword,
+                                                   c_Config.s_MySQLDatabase));
+        }
+        
+        // Got thread info, create pool
+        ThreadPool c_ThreadPool(c_JobList,
+                                l_ThreadInfo);
+        
+        /**
+         *  Update
+         */
+        
+        std::shared_ptr<ThreadShared> p_Database = std::make_shared<Database>(c_Config.s_MySQLAddress,
+                                                                              c_Config.i_MySQLPort,
+                                                                              c_Config.s_MySQLUser,
+                                                                              c_Config.s_MySQLPassword,
+                                                                              c_Config.s_MySQLDatabase);
+        
+        while (b_Run == true)
+        {
+            try
+            {
+                std::shared_ptr<Job> p_Job = c_JobList.GetJob();
+                
+                if (p_Job->Perform(p_Database) == false)
+                {
+                    c_JobList.AddJob(p_Job);
+                }
+            }
+            catch (...)
+            {}
+        }
+        
+        /**
+         *  Shutdown
+         */
+        
+        // Lock list to kick all threads
+        c_JobList.Lock();
+        
+        // Server end, shutdown
+        c_Server.Stop();
+    }
+    catch (Exception& e)
+    {
+        c_Logger.Log(Logger::WARNING, e.what2(),
+                     "Main.cpp", __LINE__);
     }
     catch (std::exception& e)
     {
-        c_Logger.Log(Logger::ERROR, "Failed to run server: " +
-                                    std::string(e.what()),
+        c_Logger.Log(Logger::WARNING, e.what(),
                      "Main.cpp", __LINE__);
     }
     
@@ -301,5 +387,6 @@ int main(int argc, const char* argv[])
     
     c_Logger.Log(Logger::INFO, "Server shutdown.",
                  "Main.cpp", __LINE__);
+    
     return EXIT_SUCCESS;
 }

@@ -1,5 +1,5 @@
 /**
- *  WorkerShared.h
+ *  ListenerContext.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,47 +19,22 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef WorkerShared_h
-#define WorkerShared_h
+#ifndef ListenerContext_h
+#define ListenerContext_h
 
 // C / C++
 
 // External
+#include <msquic.h>
 
 // Project
-#include "../ServerException.h"
+#include "../../Job/JobList.h"
+#include "./ClientConnections.h"
 
 
-class WorkerShared
+struct ListenerContext
 {
 public:
-    
-    //*************************************************************************************
-    // Constructor / Destructor
-    //*************************************************************************************
-    
-    /**
-     *  Copy constructor. Disabled for this class.
-     *
-     *  \param c_WorkerShared WorkerShared class source.
-     */
-    
-    WorkerShared(WorkerShared const& c_WorkerShared) = delete;
-    
-    /**
-     *  Default destructor.
-     */
-    
-    virtual ~WorkerShared() noexcept
-    {}
-    
-private:
-    
-    //*************************************************************************************
-    // Data
-    //*************************************************************************************
-    
-protected:
     
     //*************************************************************************************
     // Constructor
@@ -67,10 +42,31 @@ protected:
     
     /**
      *  Default constructor.
+     *
+     *  \param p_APITable The library api table.
+     *  \param p_Configuration The library configuration.
+     *  \param c_JobList The job list to hand to connections.
+     *  \param i_ClientConnectionsMax The max number of clients which can connect.
      */
     
-    WorkerShared() noexcept
+    ListenerContext(const QUIC_API_TABLE* p_APITable,
+                    HQUIC p_Configuration,
+                    JobList& c_JobList,
+                    int i_ClientConnectionsMax) noexcept : p_APITable(p_APITable),
+                                                           p_Configuration(p_Configuration),
+                                                           c_JobList(c_JobList),
+                                                           c_Connections(i_ClientConnectionsMax)
     {}
+    
+    //*************************************************************************************
+    // Data
+    //*************************************************************************************
+    
+    const QUIC_API_TABLE* p_APITable;
+    HQUIC p_Configuration;
+    
+    JobList& c_JobList;
+    ClientConnections c_Connections;
 };
 
-#endif /* WorkerShared_h */
+#endif /* ListenerContext_h */

@@ -28,11 +28,11 @@
 #include <mysqlx/xdevapi.h>
 
 // Project
-#include "../WorkerPool/WorkerShared.h"
+#include "../Job/ThreadShared.h"
 #include "./DatabaseTable.h"
 
 
-class Database : public WorkerShared
+class Database : public ThreadShared
 {
 public:
     
@@ -54,13 +54,20 @@ public:
              int i_Port,
              std::string const& s_User,
              std::string const& s_Password,
-             std::string const& s_Database);
+             std::string const& s_Database) : ThreadShared(),
+                                              c_Session(s_Address,
+                                                        i_Port,
+                                                        s_User,
+                                                        s_Password),
+                                              s_Database(s_Database)
+    {}
     
     /**
      *  Default destructor.
      */
     
-    ~Database() noexcept;
+    ~Database() noexcept
+    {}
     
     //*************************************************************************************
     // Data

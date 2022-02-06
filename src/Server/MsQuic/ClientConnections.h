@@ -1,5 +1,5 @@
 /**
- *  WorkerTask.h
+ *  ClientConnections.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,65 +19,20 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef WorkerTask_h
-#define WorkerTask_h
+#ifndef ClientConnections_h
+#define ClientConnections_h
 
 // C / C++
-#include <memory>
+#include <atomic>
 
 // External
 
 // Project
-#include "./WorkerShared.h"
 
 
-class WorkerTask
+struct ClientConnections
 {
 public:
-    
-    //*************************************************************************************
-    // Constructor / Destructor
-    //*************************************************************************************
-    
-    /**
-     *  Copy constructor. Disabled for this class.
-     *
-     *  \param c_WorkerTask WorkerTask class source.
-     */
-    
-    WorkerTask(WorkerTask const& c_WorkerTask) = delete;
-    
-    /**
-     *  Default destructor.
-     */
-    
-    virtual ~WorkerTask() noexcept
-    {}
-    
-    //*************************************************************************************
-    // Perform
-    //*************************************************************************************
-    
-    /**
-     *  Perform the task.
-     *
-     *  \param p_Shared The shared worker data.
-     *
-     *  \return true if the task should continue, false if not.
-     */
-    
-    virtual bool Perform(std::unique_ptr<WorkerShared>& p_Shared) noexcept
-    {
-        return false;
-    }
-    
-private:
-    
-    //*************************************************************************************
-    // Data
-    //*************************************************************************************
-    
-protected:
     
     //*************************************************************************************
     // Constructor
@@ -85,10 +40,20 @@ protected:
     
     /**
      *  Default constructor.
+     *
+     *  \param i_ClientConnectionsMax The max number of clients which can connect.
      */
     
-    WorkerTask() noexcept
+    ClientConnections(int i_ClientConnectionsMax) noexcept : i_ClientConnectionsMax(i_ClientConnectionsMax),
+                                                             i_ClientConnections(0)
     {}
+    
+    //*************************************************************************************
+    // Data
+    //*************************************************************************************
+    
+    const int i_ClientConnectionsMax;
+    std::atomic<int> i_ClientConnections;
 };
 
-#endif /* WorkerTask_h */
+#endif /* ClientConnections_h */

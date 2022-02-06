@@ -1,5 +1,5 @@
 /**
- *  MRH_NetMessageServer.cpp
+ *  MsQuic.cpp
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -25,6 +25,9 @@
 
 // Project
 #include "./MsQuic.h"
+#include "./ListenerContext.h"
+#include "./ConnectionContext.h"
+#include "./StreamContext.h"
 
 
 //*************************************************************************************
@@ -33,16 +36,17 @@
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 _Function_class_(QUIC_LISTENER_CALLBACK)
-QUIC_STATUS QUIC_API MsQuicListenerCallback(_In_ HQUIC Listener, _In_opt_ void* Context, _Inout_ QUIC_LISTENER_EVENT* Event)
+QUIC_STATUS QUIC_API ListenerCallback(_In_ HQUIC Listener, _In_opt_ void* Context, _Inout_ QUIC_LISTENER_EVENT* Event)
 {
-    MsQuicListenerContext* p_Listener = (MsQuicListenerContext*)Context;
+    ListenerContext* p_Listener = (ListenerContext*)Context;
     QUIC_STATUS ui_Status;
     
     switch (Event->Type)
     {
         case QUIC_LISTENER_EVENT_NEW_CONNECTION:
         {
-            if (p_Listener->i_MaxClientCount <= p_Listener->i_CurClientCount)
+            // Connections allowed?
+            if (p_Listener->c_Connections.i_ClientConnectionsMax <= p_Listener->c_Connections.i_ClientConnections)
             {
                 ui_Status = QUIC_STATUS_CONNECTION_REFUSED;
                 break;
@@ -50,28 +54,21 @@ QUIC_STATUS QUIC_API MsQuicListenerCallback(_In_ HQUIC Listener, _In_opt_ void* 
             
             try
             {
-                // First, create the connection context to use.
-                MsQuicConnectionContext* p_Connection = new MsQuicConnectionContext(p_Listener->p_APITable,
-                                                                                    Event->NEW_CONNECTION.Connection,
-                                                                                    p_Listener->i_CurClientCount);
+                // First, create the connection context to use
+                ConnectionContext* p_Connection = new ConnectionContext(p_Listener->p_APITable,
+                                                                        Event->NEW_CONNECTION.Connection,
+                                                                        p_Listener->c_JobList,
+                                                                        p_Listener->c_Connections);
                 
                 // Next, perform API setup
                 p_Listener->p_APITable->SetCallbackHandler(Event->NEW_CONNECTION.Connection,
-                                                           (void*)MsQuicConnectionCallback,
+                                                           (void*)ConnectionCallback,
                                                            p_Connection);
                 ui_Status = p_Listener->p_APITable->ConnectionSetConfiguration(Event->NEW_CONNECTION.Connection,
                                                                                p_Listener->p_Configuration);
                 
-                // Now add connection to new connections
-                // @NOTE: Lock here, list order might be modified
-                std::lock_guard<std::mutex> c_Guard(p_Listener->c_Mutex);
-                p_Listener->l_Connection.emplace_back(p_Connection);
-                
                 // Add connection as active
-                p_Listener->i_CurClientCount += 1;
-                
-                int i_NewClientCount = p_Listener->i_CurClientCount;
-                //printf("\n(MsQuicListenerCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
+                p_Listener->c_Connections.i_ClientConnections += 1;
             }
             catch (...)
             {
@@ -100,16 +97,16 @@ QUIC_STATUS QUIC_API MsQuicListenerCallback(_In_ HQUIC Listener, _In_opt_ void* 
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Function_class_(QUIC_CONNECTION_CALLBACK)
-QUIC_STATUS QUIC_API MsQuicConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Context, _Inout_ QUIC_CONNECTION_EVENT* Event)
+QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Context, _Inout_ QUIC_CONNECTION_EVENT* Event)
 {
-    MsQuicConnectionContext* p_Context = (MsQuicConnectionContext*)Context;
+    ConnectionContext* p_Context = (ConnectionContext*)Context;
     
     switch (Event->Type)
     {
         case QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_TRANSPORT:
         case QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_PEER:
         {
-            if (p_Context->p_Connection != NULL)
+            if (p_Context != NULL)
             {
                 p_Context->p_APITable->ConnectionShutdown(Connection,
                                                           QUIC_CONNECTION_SHUTDOWN_FLAG_NONE,
@@ -121,64 +118,55 @@ QUIC_STATUS QUIC_API MsQuicConnectionCallback(_In_ HQUIC Connection, _In_opt_ vo
         case QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE:
         {
             // Remove connection as active
-            p_Context->i_CurClientCount -= 1;
+            p_Context->c_Connections.i_ClientConnections -= 1;
             
-            int i_NewClientCount = p_Context->i_CurClientCount;
-            //printf("\n(MsQuicConnectionCallback) i_CurClientCount [ %d ]\n", i_NewClientCount);
-            
-            // Close if not already closed
-            if (p_Context->p_Connection != NULL)
+            // Remove context
+            if (p_Context != NULL)
             {
                 p_Context->p_APITable->ConnectionClose(p_Context->p_Connection);
-                p_Context->p_Connection = NULL;
-            }
-            
-            // No longer owned by anyone?
-            if (p_Context->b_Shared == false)
-            {
-                //printf("\n(MsQuicConnectionCallback) Delete Context [ %p ]\n", Connection);
                 delete p_Context;
-            }
-            else
-            {
-                //printf("\n(MsQuicConnectionCallback) Shutdown Connection [ %p ]\n", Connection);
-                p_Context->b_Shared = false; // Signal deletion OK
             }
             break;
         }
             
         case QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED:
         {
-            MsQuicMessageContext* p_Message = NULL;
+            StreamContext* p_Stream = NULL;
             
             for (auto It = p_Context->l_Recieved.begin(); It != p_Context->l_Recieved.end(); ++It)
             {
-                // Select empty message available
+                // Select unused stream
                 // @NOTE: Callback happens inline, so we can use
                 //        The atomic state for checks.
-                if (It->e_State == MsQuicMessageContext::FREE)
+                if (It->c_Data.e_State == StreamData::FREE)
                 {
-                    It->e_State = MsQuicMessageContext::IN_USE;
-                    It->v_Bytes.clear();
+                    It->c_Data.e_State = StreamData::IN_USE;
+                    It->c_Data.v_Bytes.clear();
                     
-                    p_Message = &(*(It));
+                    p_Stream = &(*(It));
+                    break;
                 }
             }
             
-            // No message, add new
+            
+            // No context, add new
             // @NOTE: No lock, insertion at end does not change existing
             //        iterators
-            if (p_Message == NULL)
+            if (p_Stream == NULL)
             {
                 p_Context->l_Recieved.emplace_back(p_Context->p_APITable,
-                                                   MsQuicMessageContext::IN_USE);
+                                                   Connection,
+                                                   p_Context->p_Client,
+                                                   p_Context->c_JobList);
                 
-                p_Message = &(*(--(p_Context->l_Recieved.end())));
+                p_Stream = &(*(--(p_Context->l_Recieved.end())));
+                p_Stream->c_Data.e_State = StreamData::IN_USE;
             }
             
+            // Got context, start callback
             p_Context->p_APITable->SetCallbackHandler(Event->PEER_STREAM_STARTED.Stream,
-                                                      (void*)MsQuicStreamCallback,
-                                                      p_Message);
+                                                      (void*)StreamCallback,
+                                                      p_Stream);
             break;
         }
             
@@ -196,15 +184,15 @@ QUIC_STATUS QUIC_API MsQuicConnectionCallback(_In_ HQUIC Connection, _In_opt_ vo
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Function_class_(QUIC_STREAM_CALLBACK)
-QUIC_STATUS QUIC_API MsQuicStreamCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event)
+QUIC_STATUS QUIC_API StreamCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event)
 {
-    MsQuicMessageContext* p_Message = (MsQuicMessageContext*)Context;
+    StreamContext* p_Context = (StreamContext*)Context;
     
     switch (Event->Type)
     {
         case QUIC_STREAM_EVENT_SEND_COMPLETE:
         {
-            ((MsQuicMessageContext*)(Event->SEND_COMPLETE.ClientContext))->e_State = MsQuicMessageContext::COMPLETED; // Can be used for sending again
+            ((StreamData*)(Event->SEND_COMPLETE.ClientContext))->e_State = StreamData::COMPLETED; // Can be used for sending again
             break;
         }
             
@@ -215,17 +203,17 @@ QUIC_STATUS QUIC_API MsQuicStreamCallback(_In_ HQUIC Stream, _In_opt_ void* Cont
                 uint8_t* p_Start = Event->RECEIVE.Buffers[i].Buffer;// + sizeof(QUIC_BUFFER);
                 uint8_t* p_End = p_Start + Event->RECEIVE.Buffers[i].Length;
                 
-                p_Message->v_Bytes.insert(p_Message->v_Bytes.end(),
-                                          p_Start,
-                                          p_End);
+                p_Context->c_Data.v_Bytes.insert(p_Context->c_Data.v_Bytes.end(),
+                                                 p_Start,
+                                                 p_End);
             }
             break;
         }
             
         case QUIC_STREAM_EVENT_PEER_SEND_ABORTED:
         {
-            p_Message->e_State = MsQuicMessageContext::FREE;
-            p_Message->p_APITable->StreamShutdown(Stream,
+            p_Context->c_Data.e_State = StreamData::FREE;
+            p_Context->p_APITable->StreamShutdown(Stream,
                                                   QUIC_STREAM_SHUTDOWN_FLAG_ABORT,
                                                   0);
             break;
@@ -233,18 +221,25 @@ QUIC_STATUS QUIC_API MsQuicStreamCallback(_In_ HQUIC Stream, _In_opt_ void* Cont
         
         case QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN:
         {
-            p_Message->e_State = MsQuicMessageContext::COMPLETED; // Stream shutdown, so full message
-            p_Message->p_APITable->StreamShutdown(Stream,
+            p_Context->c_Data.e_State = StreamData::COMPLETED; // Stream shutdown, so full message
+            p_Context->p_APITable->StreamShutdown(Stream,
                                                   QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL,
                                                   0);
+            
+            // Add message to client
+            p_Context->p_Client->Recieve(p_Context->c_Data);
+            p_Context->c_Data.e_State = StreamData::FREE;
+            
+            // Now update client
+            p_Context->c_JobList.AddJob(p_Context->p_Client);
             break;
         }
             
         case QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE:
         {
-            if (p_Message != NULL)
+            if (p_Context != NULL)
             {
-                p_Message->p_APITable->StreamClose(Stream);
+                p_Context->p_APITable->StreamClose(Stream);
             }
             break;
         }

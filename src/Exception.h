@@ -1,5 +1,5 @@
 /**
- *  NetException.h
+ *  Exception.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,8 +19,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef NetException_h
-#define NetException_h
+#ifndef Exception_h
+#define Exception_h
 
 // C / C++
 #include <string>
@@ -31,7 +31,7 @@
 // Project
 
 
-class NetException : public std::exception
+class Exception : public std::exception
 {
 public:
     
@@ -45,7 +45,7 @@ public:
      *  \param s_Message The error message.
      */
     
-    NetException(std::string s_Message) : s_Message(s_Message)
+    Exception(std::string s_Message) : s_Message(s_Message)
     {}
     
     /**
@@ -54,14 +54,14 @@ public:
      *  \param p_Message The error message.
      */
     
-    NetException(const char* p_Message) : s_Message(p_Message != NULL ? p_Message : "")
+    Exception(const char* p_Message) : s_Message(p_Message != NULL ? p_Message : "")
     {}
     
     /**
      *  Default destructor.
      */
     
-    ~NetException()
+    ~Exception()
     {}
     
     //*************************************************************************************
@@ -102,4 +102,4 @@ protected:
     
 };
 
-#endif /* NetException_h */
+#endif /* Exception_h */

@@ -1,5 +1,5 @@
 /**
- *  NetConnection.h
+ *  Client.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,24 +19,23 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef NetConnection_h
-#define NetConnection_h
+#ifndef Client_h
+#define Client_h
 
 // C / C++
+#include <list>
 
 // External
+#include <msquic.h>
 
 // Project
-#include "./Ver/NetMessageV1.h"
+#include "./MsQuic/StreamData.h"
+#include "../NetMessage/Ver/NetMessageV1.h"
+#include "../Job/Job.h"
 
 
-struct MsQuicConnectionContext;
-
-
-class NetConnection
+class Client : public Job
 {
-    friend class NetServer; // Allow construction by net server
-    
 public:
     
     //*************************************************************************************
@@ -44,79 +43,82 @@ public:
     //*************************************************************************************
     
     /**
+     *  Default constructor.
+     *
+     *  \param p_APITable The api table to use for sending.
+     *  \param p_Connection The connection for the client.
+     */
+    
+    Client(const QUIC_API_TABLE* p_APITable,
+           HQUIC p_Connection) noexcept;
+    
+    /**
      *  Copy constructor. Disabled for this class.
      *
      *  \param c_NetConnection NetConnection class source.
      */
     
-    NetConnection(NetConnection const& c_NetConnection) = delete;
+    Client(Client const& c_Client) = delete;
     
     /**
      *  Default destructor.
      */
     
-    ~NetConnection() noexcept;
+    ~Client() noexcept;
+    
+    //*************************************************************************************
+    // Perform
+    //*************************************************************************************
+    
+    /**
+     *  Perform the job.
+     *
+     *  \param p_Shared Thread shared data.
+     *
+     *  \return true on success, false on failure.
+     */
+    
+    bool Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept override;
     
     //*************************************************************************************
     // Recieve
     //*************************************************************************************
     
     /**
-     *  Recieve a message from the peer.
+     *  Recieve a net message with stream data.
      *
-     *  \param c_Message The message recieved. The message data will be overwritten.
-     *
-     *  \return true if a message was recieved, false if not.
+     *  \param c_Data The recieved stream data.
      */
     
-    bool Recieve(NetMessage& c_Message);
+    void Recieve(StreamData& c_Data) noexcept;
+    
+private:
     
     //*************************************************************************************
     // Send
     //*************************************************************************************
     
     /**
-     *  Send a message to the peer.
-     *
-     *  \param c_Message The message to send. The message data will be consumed.
+     *  Send current messages as stream data.
      */
     
-    void Send(NetMessage& c_Message);
-    
-    //*************************************************************************************
-    // Getters
-    //*************************************************************************************
-    
-    /**
-     *  Check if the connection is valid.
-     *
-     *  \return true if valid, false if not.
-     */
-    
-    bool GetConnected() noexcept;
-    
-private:
-    
-    //*************************************************************************************
-    // Constructor
-    //*************************************************************************************
-    
-    /**
-     *  Default constructor.
-     *
-     *  \param p_Context The managed connection context.
-     */
-    
-    NetConnection(MsQuicConnectionContext* p_Context);
+    void Send();
     
     //*************************************************************************************
     // Data
     //*************************************************************************************
     
-    MsQuicConnectionContext* p_Context;
+    // Net Message
+    std::list<NetMessage> l_Recieved;
+    std::list<NetMessage> l_Send;
+    
+    // MsQuic
+    const QUIC_API_TABLE* p_APITable;
+    HQUIC p_Connection;
+    std::list<StreamData> l_StreamData;
     
 protected:
 
 };
 
-#endif /* NetConnection_h */
+#endif /* Client_h */

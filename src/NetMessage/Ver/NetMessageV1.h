@@ -39,7 +39,6 @@ namespace NetMessageV1
     
     // Server
     constexpr size_t us_SizeServerAddress = 256;
-    constexpr size_t us_SizeServerChannel = 64;
     
     // Account
     constexpr size_t us_SizeAccountMail = 128;
@@ -48,9 +47,10 @@ namespace NetMessageV1
     
     constexpr size_t us_SizeNonceHash = 24 + 16 + sizeof(uint32_t); // crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + sizeof(uint32_t);
     
-    // Device
     constexpr size_t us_SizeDeviceKey = 25;
-    constexpr size_t us_SizeDevicePassword = 32;
+    
+    // Communication
+    constexpr size_t us_SizeNotificationString = 256;
     
     //*************************************************************************************
     // NetMessage Data
@@ -62,46 +62,48 @@ namespace NetMessageV1
     //  Server Auth
     //
     
-    struct C_MSG_AUTH_REQUEST_DATA
+    struct MSG_AUTH_REQUEST_DATA
     {
         char p_Mail[us_SizeAccountMail]; // The account mail
         char p_DeviceKey[us_SizeDeviceKey]; // Device valid for server
-        uint8_t u8_Actor;  // Which type of client (platform or app)
+        uint8_t u8_ClientType;  // Which type of client (platform or app)
         uint8_t u8_Version; // NetMessage version in use
     };
     
-    struct S_MSG_AUTH_CHALLENGE_DATA
+    struct MSG_AUTH_CHALLENGE_DATA
     {
         char p_Salt[us_SizeAccountPasswordSalt]; // Salt to use for pw hash
         uint32_t u32_Nonce; // Nonce to hash
         uint8_t u8_HashType;
     };
     
-    struct C_MSG_AUTH_PROOF_DATA
+    struct MSG_AUTH_PROOF_DATA
     {
         uint8_t p_NonceHash[us_SizeNonceHash]; // Created hash
     };
     
-    struct S_MSG_AUTH_RESULT_DATA
+    struct MSG_AUTH_RESULT_DATA
     {
         uint8_t u8_Result; // The result of the auth
     };
     
     //
-    //  Channel
+    //  Communication
     //
     
-    struct C_MSG_CHANNEL_REQUEST_DATA
+    struct MSG_DATA_AVAIL_DATA
     {
-        char p_Channel[us_SizeServerChannel]; // Requested channel
+        uint8_t u8_Data; // The type of requested data
     };
     
-    struct S_MSG_CHANNEL_RESPONSE_DATA
+    struct MSG_NO_DATA_DATA
     {
-        char p_Channel[us_SizeServerChannel]; // Requested channel
-        char p_Address[us_SizeServerAddress];
-        uint32_t u32_Port;
-        uint8_t u8_Result;
+        uint8_t u8_Data; // The type of requested data
+    };
+    
+    struct MSG_NOTIFICATION_DATA
+    {
+        char p_String[us_SizeNotificationString];
     };
     
     //*************************************************************************************

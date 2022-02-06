@@ -1,5 +1,5 @@
 /**
- *  CommunicationMain.h
+ *  StreamData.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,31 +19,50 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef CommunicationMain_h
-#define CommunicationMain_h
+#ifndef StreamData_h
+#define StreamData_h
 
 // C / C++
+#include <atomic>
+#include <vector>
 
 // External
 
 // Project
-#include "../Configuration.h"
 
 
-namespace CommunicationMain
+struct StreamData
 {
+public:
+    
     //*************************************************************************************
-    // Run
+    // Types
+    //*************************************************************************************
+    
+    enum State
+    {
+        FREE = 0,
+        IN_USE = 1,
+        COMPLETED = 2
+    };
+    
+    //*************************************************************************************
+    // Constructor
     //*************************************************************************************
     
     /**
-     *  Run as communication server.
-     *
-     *  \param c_Config The server configuration to use.
-     *  \param b_Run The server run flag.
+     *  Default constructor.
      */
     
-    void Run(Configuration& c_Config, bool& b_Run);
+    StreamData() noexcept : e_State(FREE)
+    {}
+    
+    //*************************************************************************************
+    // Types
+    //*************************************************************************************
+    
+    std::atomic<State> e_State; // Currently reading
+    std::vector<uint8_t> v_Bytes;
 };
 
-#endif /* CommunicationMain_h */
+#endif /* StreamData_h */

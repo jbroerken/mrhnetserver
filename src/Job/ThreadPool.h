@@ -1,5 +1,5 @@
 /**
- *  MessageExchange.h
+ *  ThreadPool.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,20 +19,22 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef MessageExchange_h
-#define MessageExchange_h
+#ifndef ThreadPool_h
+#define ThreadPool_h
 
 // C / C++
+#include <thread>
+#include <atomic>
 #include <list>
-#include <mutex>
 
 // External
 
 // Project
-#include "../NetMessage/NetMessage.h"
+#include "./ThreadShared.h"
+#include "./JobList.h"
 
 
-class MessageExchange
+class ThreadPool
 {
 public:
     
@@ -43,46 +45,53 @@ public:
     /**
      *  Default constructor.
      *
-     *  \param s_DeviceKey The device key for the message exchange.
+     *  \param c_JobList The job list to work on.
+     *  \param l_ThreadInfo The list defining thread count with thread shared data.
      */
     
-    MessageExchange(std::string const& s_DeviceKey) noexcept : s_DeviceKey(s_DeviceKey)
-    {}
+    ThreadPool(JobList& c_JobList,
+               std::list<std::unique_ptr<ThreadShared>>& l_ThreadInfo);
     
     /**
      *  Copy constructor. Disabled for this class.
      *
-     *  \param c_MessageExchange MessageExchange class source.
+     *  \param c_ThreadPool ThreadPool class source.
      */
     
-    MessageExchange(MessageExchange const& c_MessageExchange) = delete;
+    ThreadPool(ThreadPool const& c_ThreadPool) = delete;
     
     /**
      *  Default destructor.
      */
     
-    ~MessageExchange() noexcept
-    {}
+    ~ThreadPool() noexcept;
+    
+private:
+    
+    //*************************************************************************************
+    // Update
+    //*************************************************************************************
+    
+    /**
+     *  Run a thread update.
+     *
+     *  \param p_Instance The thread pool instance to update with.
+     *  \param p_ThreadShared The thread shared data.
+     */
+    
+    static void Update(ThreadPool* p_Instance, ThreadShared* p_ThreadShared) noexcept;
     
     //*************************************************************************************
     // Data
     //*************************************************************************************
     
-    // Identification
-    const std::string s_DeviceKey;
+    std::list<std::thread> l_Thread;
+    std::atomic<bool> b_Run;
     
-    // Platform -> App
-    std::list<NetMessage> l_PAMessage;
-    std::mutex c_PAMutex;
-    
-    // App -> Platform
-    std::list<NetMessage> l_APMessage;
-    std::mutex c_APMutex;
-    
-private:
+    JobList& c_JobList;
     
 protected:
-    
+
 };
 
-#endif /* MessageExchange_h */
+#endif /* ThreadPool_h */

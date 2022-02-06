@@ -34,57 +34,41 @@ namespace
 {
     enum Identifier
     {
-        // Shared
-        TYPE = 0,
-        PORT = 1,
-        CERT_FILE_PATH = 2,
-        KEY_FILE_PATH = 3,
-        MAX_CLIENT_COUNT = 4,
-        CONNECTION_TIMEOUT_S = 5,
-        CONNECTION_PULSE_MS = 6,
-        MESSAGE_PULS_MS = 7,
+        // Server
+        PORT = 0,
+        CERT_FILE_PATH = 1,
+        KEY_FILE_PATH = 2,
+        MAX_CLIENT_COUNT = 3,
+        CONNECTION_TIMEOUT_S = 4,
         
         // MySQL
-        MYSQL_ADDRESS,
-        MYSQL_PORT,
-        MYSQL_USER,
+        MYSQL_ADDRESS = 5,
+        MYSQL_PORT = 6,
+        MYSQL_USER = 7,
         MYSQL_PASSWORD,
         MYSQL_DATABASE,
         
-        // Connection Server
-        
-        // Communication Server
-        COM_SERVER_ID,
-        
         // Bounds
-        IDENTIFIER_MAX = COM_SERVER_ID,
+        IDENTIFIER_MAX = MYSQL_DATABASE,
         
         IDENTIFIER_COUNT = IDENTIFIER_MAX + 1
     };
     
     const char* p_Identifier[IDENTIFIER_COUNT] =
     {
-        // Shared
-        "ServerType=",
+        // Server
         "ServerPort=",
         "ServerCertFilePath=",
         "ServerKeyFilePath=",
         "ServerMaxClientCount=",
         "ServerConnectionTimeoutS=",
-        "ServerConnectionPulseMS=",
-        "ServerMessagePulseMS=",
         
         // MySQL
         "MySQLAddress=",
         "MySQLPort=",
         "MySQLUser=",
         "MySQLPassword=",
-        "MySQLDatabase=",
-        
-        // Connection Server
-        
-        // Communication Server
-        "ComServerID="
+        "MySQLDatabase="
     };
 }
 
@@ -93,20 +77,16 @@ namespace
 // Constructor / Destructor
 //*************************************************************************************
 
-Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_COUNT),
-                                                              i_Port(-1),
+Configuration::Configuration(std::string const& s_FilePath) : i_Port(-1),
                                                               s_CertFilePath("/usr/share/mrhnetserver/cert.crt"),
                                                               s_KeyFilePath("/usr/share/mrhnetserver/key.key"),
                                                               i_MaxClientCount(1024),
                                                               i_ConnectionTimeoutS(60),
-                                                              i_ConnectionPulseMS(100),
-                                                              i_MessagePulseMS(100),
                                                               s_MySQLAddress("localhost"),
                                                               i_MySQLPort(33060),
                                                               s_MySQLUser("user"),
                                                               s_MySQLPassword(""),
-                                                              s_MySQLDatabase("mrhnetserver"),
-                                                              i_ServerID(-1)
+                                                              s_MySQLDatabase("mrhnetserver")
 {
     std::ifstream f_File(s_FilePath);
     std::string s_Line;
@@ -114,14 +94,13 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
     
     if (f_File.is_open() == false)
     {
-        throw ServerException("Could not open file " +
-                              s_FilePath +
-                              " for reading: " +
-                              std::string(std::strerror(errno)) +
-                              " (" +
-                              std::to_string(errno) +
-                              ")",
-                              ACTOR_TYPE_COUNT);
+        throw Exception("Could not open file " +
+                        s_FilePath +
+                        " for reading: " +
+                        std::string(std::strerror(errno)) +
+                        " (" +
+                        std::to_string(errno) +
+                        ")");
     }
     
     while (getline(f_File, s_Line))
@@ -149,10 +128,7 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
             {
                 switch (i)
                 {
-                    // Shared
-                    case TYPE:
-                        e_Type = static_cast<ActorType>(std::stoi(s_Line));
-                        break;
+                    // Server
                     case PORT:
                         i_Port = std::stoi(s_Line);
                         break;
@@ -167,12 +143,6 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
                         break;
                     case CONNECTION_TIMEOUT_S:
                         i_ConnectionTimeoutS = std::stoi(s_Line);
-                        break;
-                    case CONNECTION_PULSE_MS:
-                        i_ConnectionPulseMS = std::stoi(s_Line);
-                        break;
-                    case MESSAGE_PULS_MS:
-                        i_MessagePulseMS = std::stoi(s_Line);
                         break;
                         
                     // MySQL
@@ -190,13 +160,6 @@ Configuration::Configuration(std::string const& s_FilePath) : e_Type(ACTOR_TYPE_
                         break;
                     case MYSQL_DATABASE:
                         s_MySQLDatabase = s_Line;
-                        break;
-                        
-                    // Connection Server
-                        
-                    // Communication Server
-                    case COM_SERVER_ID:
-                        i_ServerID = std::stoi(s_Line);
                         break;
                         
                     // Unknown
