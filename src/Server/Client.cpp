@@ -30,6 +30,10 @@
 #include "./MsQuic/MsQuic.h"
 #include "../Logger.h"
 
+// Pre-defined
+using namespace ClientAuthentication;
+using namespace ClientCommunication;
+
 
 //*************************************************************************************
 // Constructor / Destructor
@@ -60,6 +64,17 @@ void Client::Disconnect() noexcept
         return;
     }
     
+    /*
+    // Are we still required to send something?
+    for (auto It = l_StreamData.begin(); It != l_StreamData.end(); ++It)
+    {
+        if (It->e_State == StreamData::IN_USE)
+        {
+            return;
+        }
+    }
+    */
+    
     p_APITable->ConnectionShutdown(p_Connection,
                                    QUIC_CONNECTION_SHUTDOWN_FLAG_NONE,
                                    0);
@@ -81,15 +96,83 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
         return false;
     }
     
-    // Grab and process messages
-    for (auto& NetMessage : l_Recieved)
+    // Grab and process recieved messages
+    if (l_Recieved.size() > 0)
     {
-        switch (NetMessage.GetID())
+        Database& c_Database = dynamic_cast<Database&>(*(p_Shared.get()));
+        bool b_Disconnect = false;
+        
+        for (auto& Recieved : l_Recieved)
         {
-            default:
+            switch (Recieved.GetID())
+            {
+                /**
+                 *  Net Message Version 1
+                 */
+                
+                // Server Auth
+                case NetMessage::MSG_AUTH_REQUEST:
+                {
+                    NetMessage c_Result = HandleAuthRequest(ToData<MSG_AUTH_REQUEST_DATA>(Recieved.v_Data),
+                                                            c_Database,
+                                                            c_UserInfo);
+                    
+                    if (c_Result.GetID() == NetMessage::MSG_AUTH_RESULT)
+                    {
+                        b_Disconnect = true;
+                    }
+                    
+                    l_Send.emplace_back(c_Result);
+                    break;
+                }
+                case NetMessage::MSG_AUTH_PROOF:
+                {
+                    NetMessage c_Result = HandleAuthProof(ToData<MSG_AUTH_PROOF_DATA>(Recieved.v_Data),
+                                                          c_Database,
+                                                          c_UserInfo);
+                    
+                    // Our proof result is an error?
+                    if (c_Result.v_Data[NetMessage::us_DataPos] != NetMessage::ERR_NONE)
+                    {
+                        b_Disconnect = true;
+                    }
+                    
+                    l_Send.emplace_back(c_Result);
+                    break;
+                }
+                    
+                // Communication
+                case NetMessage::MSG_DATA_AVAIL:
+                {
+                    break;
+                }
+                case NetMessage::MSG_TEXT:
+                case NetMessage::MSG_LOCATION:
+                {
+                    break;
+                }
+                case NetMessage::MSG_NOTIFICATION: { break; } // NYI
+                case NetMessage::MSG_CUSTOM: { break; } // NYI
+                    
+                /**
+                 *  Unk
+                 */
+                    
+                default:
+                {
+                    b_Disconnect = true;
+                    break;
+                }
+            }
+            
+            if (b_Disconnect == true)
+            {
                 Disconnect();
-                return true;
+                break;
+            }
         }
+        
+        l_Recieved.clear();
     }
     
     // Processed recieved messages, now send
@@ -106,6 +189,8 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                                 "Client.cpp", __LINE__);
         b_Result = false;
     }
+    
+    c_Mutex.unlock();
     
     // Return finished or retry
     // @NOTE: On disconnected we send true, can't work on a
@@ -142,13 +227,15 @@ void Client::Send()
         // Find free stream data first
         StreamData* p_Data = NULL;
         
-        for (auto It = l_StreamData.begin(); It != l_StreamData.end();)
+        for (auto It = l_StreamData.begin(); It != l_StreamData.end(); ++It)
         {
             // Select empty message available
             if (It->e_State == StreamData::FREE || It->e_State == StreamData::COMPLETED)
             {
                 It->e_State = StreamData::IN_USE;
                 p_Data = &(*(It));
+                
+                break;
             }
         }
         
@@ -179,10 +266,10 @@ void Client::Send()
         if (QUIC_FAILED(p_APITable->StreamOpen(p_Connection,
                                                QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL, /* QUIC_STREAM_OPEN_FLAG_NONE, */
                                                StreamCallback,
-                                               p_Data, /* Pass message as context */
+                                               NULL, /* No context for shutdown, etc */
                                                &p_Stream)))
         {
-            p_Data->e_State = StreamData::COMPLETED;
+            p_Data->e_State = StreamData::FREE;
             
             throw Exception("Failed to open stream!");
         }
@@ -190,7 +277,7 @@ void Client::Send()
                                                      QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL)))
         {
             p_APITable->StreamClose(p_Stream);
-            p_Data->e_State = StreamData::COMPLETED;
+            p_Data->e_State = StreamData::FREE;
             
             throw Exception("Failed to start stream!");
         }
@@ -201,7 +288,7 @@ void Client::Send()
                                                     p_Data))) /* Send context, allows reset on send complete */
         {
             p_APITable->StreamClose(p_Stream);
-            p_Data->e_State = StreamData::COMPLETED;
+            p_Data->e_State = StreamData::FREE;
             
             throw Exception("Failed to send on stream!");
         }

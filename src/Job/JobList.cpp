@@ -32,6 +32,7 @@
 //*************************************************************************************
 
 JobList::JobList() noexcept : us_EntryCount(0),
+                              us_JobCount(0),
                               b_Locked(false)
 {}
 
@@ -93,6 +94,7 @@ void JobList::AddJob(std::shared_ptr<Job> p_Job)
         if (dq_Job[i].p_Job == NULL)
         {
             dq_Job[i].p_Job.swap(p_Job);
+            us_JobCount += 1;
             
             dq_Job[i].c_Mutex.unlock();
             c_Condition.notify_one();
@@ -112,6 +114,7 @@ void JobList::AddJob(std::shared_ptr<Job> p_Job)
         
         dq_Job.emplace_back(p_Job);
         us_EntryCount += 1;
+        us_JobCount += 1;
         
         c_Mutex.unlock();
         c_Condition.notify_one();
@@ -149,15 +152,23 @@ std::shared_ptr<Job> JobList::GetJob()
             
             // Grab the job
             p_Result.swap(dq_Job[i].p_Job);
+            us_JobCount -= 1;
             
             // Unlock and return
             dq_Job[i].c_Mutex.unlock();
             return p_Result;
         }
         
-        // No job found, wait for one
-        std::unique_lock<std::mutex> c_Lock(c_Mutex);
-        c_Condition.wait(c_Lock);
+        // No job available, wait for one
+        // @NOTE: We need this check for the case where all
+        //        threads are running and at a iterator value
+        //        higher than the entry where a new job was
+        //        added
+        if (us_JobCount == 0)
+        {
+            std::unique_lock<std::mutex> c_Lock(c_Mutex);
+            c_Condition.wait(c_Lock);
+        }
     }
     
     throw Exception("Job list locked!");

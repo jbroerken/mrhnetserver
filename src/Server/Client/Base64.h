@@ -1,5 +1,5 @@
 /**
- *  ClientAuthentication.h
+ *  Base64.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,56 +19,57 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef ClientAuthentication_h
-#define ClientAuthentication_h
+#ifndef Base64_h
+#define Base64_h
 
 // C / C++
+#include <cstdint>
+#include <string>
 
 // External
 
 // Project
-#include "./UserInfo.h"
-#include "../../NetMessage/Ver/NetMessageV1.h"
-#include "../../Database/Database.h"
-#include "../../Exception.h"
-
-using namespace NetMessageV1;
 
 
-namespace ClientAuthentication
+namespace Base64
 {
     //*************************************************************************************
-    // Auth Request
+    // To Bytes
     //*************************************************************************************
     
     /**
-     *  Handle a client authentication request.
+     *  Decode a given base64 string to bytes.
      *
-     *  \param c_Request The recieved request.
-     *  \param c_Database The database to use.
-     *  \param c_UserInfo The user info to write.
+     *  \param s_Base64 The base64 string to decode.
      *
-     *  \return The result net message to send.
+     *  \return The byte result on success, a empty string on failure.
      */
     
-    NetMessage HandleAuthRequest(MSG_AUTH_REQUEST_DATA c_Request, Database& c_Database, UserInfo& c_UserInfo) noexcept;
+    std::string ToBytes(std::string const& s_Base64) noexcept;
+    
+    /**
+     *  Get a part of bytes from a given base64 string.
+     *
+     *  \param s_Base64 The base64 string to decode.
+     *
+     *  \return The byte result on success, a empty string on failure.
+     */
+    
+    std::string ToBytesPart(std::string const& s_Base64, size_t us_Pos, size_t us_Length) noexcept;
     
     //*************************************************************************************
-    // Auth Proof
+    // To String
     //*************************************************************************************
     
     /**
-     *  Handle a client authentication proof.
+     *  Encode bytes in a base64 string.
      *
-     *  \param c_Proof The recieved proof.
-     *  \param c_Database The database to use.
-     *  \param c_UserInfo The user info to write.
+     *  \param v_Bytes The bytes to encode.
      *
-     *  \return The result net message to send.
+     *  \return The base64 string on result, false if not.
      */
     
-    NetMessage HandleAuthProof(MSG_AUTH_PROOF_DATA c_Proof, Database& c_Database, UserInfo& c_UserInfo) noexcept;
-    
+    std::string ToString(std::vector<uint8_t> const& v_Bytes) noexcept;
 }
 
-#endif /* ClientAuthentication_h */
+#endif /* Base64_h */

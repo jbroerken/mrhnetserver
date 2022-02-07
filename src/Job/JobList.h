@@ -155,6 +155,7 @@ private:
     
     std::deque<Entry> dq_Job;
     std::atomic<size_t> us_EntryCount; // Job list count
+    std::atomic<size_t> us_JobCount; // Available valid jobs
     
     std::atomic<bool> b_Locked;
     

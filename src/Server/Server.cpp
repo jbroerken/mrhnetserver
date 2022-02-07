@@ -156,8 +156,8 @@ void Server::Start(int i_Port, std::string const& s_CertFilePath, std::string co
     c_Settings.IsSet.ServerResumptionLevel = TRUE;
     c_Settings.PeerUnidiStreamCount = i_MaxClientCount * CLIENT_STREAMS_MULTIPLIER;
     c_Settings.IsSet.PeerUnidiStreamCount = TRUE;
-    //c_Settings.KeepAliveIntervalMs = c_Settings.IdleTimeoutMs / 2;
-    //c_Settings.IsSet.KeepAliveIntervalMs = TRUE;
+    c_Settings.KeepAliveIntervalMs = c_Settings.IdleTimeoutMs / 2;
+    c_Settings.IsSet.KeepAliveIntervalMs = TRUE;
 
     c_Config.CertFile.CertificateFile = (char*)s_CertFilePath.c_str();
     c_Config.CertFile.PrivateKeyFile = (char*)s_KeyFilePath.c_str();

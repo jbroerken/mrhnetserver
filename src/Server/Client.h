@@ -31,6 +31,7 @@
 
 // Project
 #include "./MsQuic/StreamData.h"
+#include "./Client/UserInfo.h"
 #include "../NetMessage/NetMessage.h"
 #include "../Job/Job.h"
 
@@ -141,10 +142,8 @@ private:
     HQUIC p_Connection;
     std::list<StreamData> l_StreamData;
     
-    // Authentication
-    bool b_Authenticated;
-    uint32_t u32_Nonce;
-    uint8_t u8_ClientType;
+    // User
+    UserInfo c_UserInfo;
     
 protected:
 

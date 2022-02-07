@@ -1,5 +1,5 @@
 /**
- *  NetMessage.cpp
+ *  Base64.cpp
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -22,58 +22,63 @@
 // C / C++
 
 // External
+#include <sodium.h>
 
 // Project
-#include "./NetMessage.h"
+#include "./Base64.h"
 
 
 //*************************************************************************************
-// Constructor / Destructor
+// To Bytes
 //*************************************************************************************
 
-NetMessage::NetMessage(uint8_t u8_ID)
+std::string Base64::ToBytes(std::string const& s_Base64) noexcept
 {
-    if (u8_ID > NET_MESSAGE_LIST_MAX)
+    // Base64 is 1.25 bigger
+    size_t us_FullLength = (s_Base64.size() / 4) * 3;
+    
+    if (us_FullLength == 0)
     {
-        throw Exception("Unknown message ID!");
+        return "";
     }
     
-    v_Data.emplace_back(u8_ID);
+    unsigned char p_Bin[us_FullLength];
+    size_t us_Length = 0;
+    
+    if (sodium_base642bin(p_Bin, us_FullLength,
+                          s_Base64.data(), s_Base64.size(),
+                          NULL, &us_Length,
+                          NULL,
+                          sodium_base64_VARIANT_ORIGINAL) != 0)
+    {
+        return "";
+    }
+    else if (us_Length == 0)
+    {
+        return "";
+    }
+    
+    return std::string(p_Bin,
+                       p_Bin + us_Length);
 }
 
-NetMessage::NetMessage(std::vector<uint8_t>& v_Data)
+std::string Base64::ToBytesPart(std::string const& s_Base64, size_t us_Pos, size_t us_Length) noexcept
 {
-    if (v_Data.size() < us_DataPos)
+    std::string s_Result = ToBytes(s_Base64);
+    
+    if (s_Result.size() < (us_Pos + us_Length))
     {
-        throw Exception("Invalid message data size!");
+        return "";
     }
     
-    this->v_Data.swap(v_Data);
+    return s_Result.substr(us_Pos, us_Length);
 }
 
-NetMessage::NetMessage(std::vector<uint8_t> const& v_Data)
-{
-    if (v_Data.size() < us_DataPos)
-    {
-        throw Exception("Invalid message data size!");
-    }
-    
-    this->v_Data = v_Data;
-}
-
-NetMessage::~NetMessage() noexcept
-{}
-
 //*************************************************************************************
-// Getters
+// To String
 //*************************************************************************************
 
-NetMessage::NetMessageList NetMessage::GetID() const noexcept
+std::string Base64::ToString(std::vector<uint8_t> const& v_Bytes) noexcept
 {
-    if (v_Data.size() < us_DataPos)
-    {
-        return MSG_UNK;
-    }
-    
-    return static_cast<NetMessageList>(v_Data[us_IDPos]);
+    return "";
 }
