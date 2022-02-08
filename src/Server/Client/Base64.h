@@ -25,6 +25,7 @@
 // C / C++
 #include <cstdint>
 #include <string>
+#include <vector>
 
 // External
 
@@ -70,6 +71,17 @@ namespace Base64
      */
     
     std::string ToString(std::vector<uint8_t> const& v_Bytes) noexcept;
+    
+    /**
+     *  Encode bytes in a base64 string.
+     *
+     *  \param p_Bytes The bytes to encode.
+     *  \param us_Length The length of the bytes to encode.
+     *
+     *  \return The base64 string on result, false if not.
+     */
+    
+    std::string ToString(const uint8_t* p_Bytes, size_t us_Length) noexcept;
 }
 
 #endif /* Base64_h */

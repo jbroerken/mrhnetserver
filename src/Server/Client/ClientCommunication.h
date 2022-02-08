@@ -23,10 +23,12 @@
 #define ClientCommunication_h
 
 // C / C++
+#include <list>
 
 // External
 
 // Project
+#include "./UserInfo.h"
 #include "../../NetMessage/Ver/NetMessageV1.h"
 #include "../../Database/Database.h"
 #include "../../Exception.h"
@@ -34,7 +36,35 @@
 
 namespace ClientCommunication
 {
+    //*************************************************************************************
+    // Retrieve
+    //*************************************************************************************
     
+    /**
+     *  Retrieve all sendable communication messages.
+     *
+     *  \param u8_Type The message type to recieve.
+     *  \param c_Database The database to use.
+     *  \param c_UserInfo The user info to use.
+     *
+     *  \return The sendable communication net messages.
+     */
+    
+    std::list<NetMessage> RetrieveMessages(uint8_t u8_Type, Database& c_Database, UserInfo const& c_UserInfo) noexcept;
+    
+    //*************************************************************************************
+    // Store
+    //*************************************************************************************
+    
+    /**
+     *  Store a communication message.
+     *
+     *  \param c_NetMessage The communication message to store.
+     *  \param c_Database The database to use.
+     *  \param c_UserInfo The user info to write.
+     */
+    
+    void StoreMessage(NetMessage const& c_NetMessage, Database& c_Database, UserInfo const& c_UserInfo) noexcept;
 }
 
 #endif /* ClientCommunication_h */

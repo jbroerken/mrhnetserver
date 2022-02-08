@@ -31,6 +31,10 @@
 #include "../Logger.h"
 
 // Pre-defined
+#ifndef CLIENT_EXTENDED_LOGGING
+    #define CLIENT_EXTENDED_LOGGING 1//0
+#endif
+
 using namespace ClientAuthentication;
 using namespace ClientCommunication;
 
@@ -53,6 +57,15 @@ Client::~Client() noexcept
 
 void Client::Disconnected() noexcept
 {
+    Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
+                                          std::to_string(c_UserInfo.u32_UserID) +
+                                          ", Device Key: " +
+                                          c_UserInfo.s_DeviceKey +
+                                          ", Client Type: " +
+                                          std::to_string(c_UserInfo.u8_ClientType) +
+                                          "): Disconnected.",
+                            "Client.cpp", __LINE__);
+    
     std::lock_guard<std::mutex> c_Guard(c_Mutex);
     p_Connection = NULL;
 }
@@ -99,80 +112,120 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
     // Grab and process recieved messages
     if (l_Recieved.size() > 0)
     {
-        Database& c_Database = dynamic_cast<Database&>(*(p_Shared.get()));
-        bool b_Disconnect = false;
-        
-        for (auto& Recieved : l_Recieved)
+        try
         {
-            switch (Recieved.GetID())
+            
+            Database& c_Database = dynamic_cast<Database&>(*(p_Shared.get()));
+            bool b_Disconnect = false;
+            
+            for (auto It = l_Recieved.begin(); It != l_Recieved.end();)
             {
-                /**
-                 *  Net Message Version 1
-                 */
-                
-                // Server Auth
-                case NetMessage::MSG_AUTH_REQUEST:
+                switch (It->GetID())
                 {
-                    NetMessage c_Result = HandleAuthRequest(ToData<MSG_AUTH_REQUEST_DATA>(Recieved.v_Data),
-                                                            c_Database,
-                                                            c_UserInfo);
+                    /**
+                     *  Net Message Version 1
+                     */
                     
-                    if (c_Result.GetID() == NetMessage::MSG_AUTH_RESULT)
+                    // Server Auth
+                    case NetMessage::MSG_AUTH_REQUEST:
                     {
-                        b_Disconnect = true;
+                        NetMessage c_Result = HandleAuthRequest(ToData<MSG_AUTH_REQUEST_DATA>(It->v_Data),
+                                                                c_Database,
+                                                                c_UserInfo);
+                        
+                        // We should recieve MSG_AUTH_CHALLENGE on success
+                        if (c_Result.GetID() == NetMessage::MSG_AUTH_RESULT)
+                        {
+                            b_Disconnect = true;
+                        }
+                        
+                        l_Send.emplace_back(c_Result);
+                        break;
                     }
-                    
-                    l_Send.emplace_back(c_Result);
-                    break;
-                }
-                case NetMessage::MSG_AUTH_PROOF:
-                {
-                    NetMessage c_Result = HandleAuthProof(ToData<MSG_AUTH_PROOF_DATA>(Recieved.v_Data),
+                    case NetMessage::MSG_AUTH_PROOF:
+                    {
+                        NetMessage c_Result = HandleAuthProof(ToData<MSG_AUTH_PROOF_DATA>(It->v_Data),
+                                                              c_Database,
+                                                              c_UserInfo);
+                        
+                        // Our proof result is an error? (Pos 1, uint8_t)
+                        if (c_Result.v_Data[NetMessage::us_DataPos] != NetMessage::ERR_NONE)
+                        {
+                            b_Disconnect = true;
+                        }
+                        
+                        l_Send.emplace_back(c_Result);
+                        break;
+                    }
+                        
+                    // Communication
+                    case NetMessage::MSG_DATA_AVAIL:
+                    {
+                        if (c_UserInfo.b_Authenticated == false)
+                        {
+                            b_Disconnect = true;
+                            break;
+                        }
+                        
+                        // @NOTE: Pos 1 of MSG_DATA_AVAIL is the message type requested (uint8_t)!
+                        std::list<NetMessage> l_Message = ClientCommunication::RetrieveMessages(It->v_Data[NetMessage::us_DataPos],
+                                                                                                c_Database,
+                                                                                                c_UserInfo);
+                        
+                        for (auto& Message : l_Message)
+                        {
+                            l_Send.emplace_back(Message);
+                        }
+                        break;
+                    }
+                    case NetMessage::MSG_TEXT:
+                    case NetMessage::MSG_LOCATION:
+                    {
+                        if (c_UserInfo.b_Authenticated == false)
+                        {
+                            b_Disconnect = true;
+                            break;
+                        }
+                        
+                        ClientCommunication::StoreMessage(*(It),
                                                           c_Database,
                                                           c_UserInfo);
-                    
-                    // Our proof result is an error?
-                    if (c_Result.v_Data[NetMessage::us_DataPos] != NetMessage::ERR_NONE)
+                        break;
+                    }
+                    case NetMessage::MSG_NOTIFICATION: { break; } // NYI
+                    case NetMessage::MSG_CUSTOM: { break; } // NYI
+                        
+                    /**
+                     *  Unk
+                     */
+                        
+                    default:
                     {
                         b_Disconnect = true;
+                        break;
                     }
-                    
-                    l_Send.emplace_back(c_Result);
-                    break;
                 }
-                    
-                // Communication
-                case NetMessage::MSG_DATA_AVAIL:
+                
+                if (b_Disconnect == true)
                 {
+                    // Clear all, no reciever for answers
+                    l_Recieved.clear();
+                    Disconnect();
                     break;
                 }
-                case NetMessage::MSG_TEXT:
-                case NetMessage::MSG_LOCATION:
+                else
                 {
-                    break;
+                    // Message handled, remove
+                    It = l_Recieved.erase(It);
                 }
-                case NetMessage::MSG_NOTIFICATION: { break; } // NYI
-                case NetMessage::MSG_CUSTOM: { break; } // NYI
-                    
-                /**
-                 *  Unk
-                 */
-                    
-                default:
-                {
-                    b_Disconnect = true;
-                    break;
-                }
-            }
-            
-            if (b_Disconnect == true)
-            {
-                Disconnect();
-                break;
             }
         }
-        
-        l_Recieved.clear();
+        catch (std::exception& e)
+        {
+            Logger::Singleton().Log(Logger::ERROR, "Failed to process recieved net message: " +
+                                                   std::string(e.what()),
+                                    "Client.cpp", __LINE__);
+        }
     }
     
     // Processed recieved messages, now send
@@ -204,6 +257,21 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
 
 void Client::Recieve(StreamData& c_Data) noexcept
 {
+#if CLIENT_EXTENDED_LOGGING > 0
+        Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
+                                              std::to_string(c_UserInfo.u32_UserID) +
+                                              ", Device Key: " +
+                                              c_UserInfo.s_DeviceKey +
+                                              ", Client Type: " +
+                                              std::to_string(c_UserInfo.u8_ClientType) +
+                                              "): Recieved NetMessage " +
+                                              std::to_string(c_Data.v_Bytes[0]) +
+                                              " (Size: " +
+                                              std::to_string(c_Data.v_Bytes.size()) +
+                                              ").",
+                                "Client.cpp", __LINE__);
+#endif
+    
     try
     {
         l_Recieved.emplace_back(c_Data.v_Bytes);
@@ -224,6 +292,21 @@ void Client::Send()
 {
     for (auto It = l_Send.begin(); It != l_Send.end(); ++It)
     {
+#if CLIENT_EXTENDED_LOGGING > 0
+        Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
+                                              std::to_string(c_UserInfo.u32_UserID) +
+                                              ", Device Key: " +
+                                              c_UserInfo.s_DeviceKey +
+                                              ", Client Type: " +
+                                              std::to_string(c_UserInfo.u8_ClientType) +
+                                              "): Sending NetMessage " +
+                                              std::to_string(It->GetID()) +
+                                              " (Size: " +
+                                              std::to_string(It->v_Data.size()) +
+                                              ").",
+                                "Client.cpp", __LINE__);
+#endif
+        
         // Find free stream data first
         StreamData* p_Data = NULL;
         

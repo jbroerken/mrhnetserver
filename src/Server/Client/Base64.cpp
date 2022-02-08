@@ -80,5 +80,25 @@ std::string Base64::ToBytesPart(std::string const& s_Base64, size_t us_Pos, size
 
 std::string Base64::ToString(std::vector<uint8_t> const& v_Bytes) noexcept
 {
-    return "";
+    return ToString(v_Bytes.data(), v_Bytes.size());
+}
+
+std::string Base64::ToString(const uint8_t* p_Bytes, size_t us_Length) noexcept
+{
+    size_t us_Base64Len = sodium_base64_encoded_len(us_Length, sodium_base64_VARIANT_ORIGINAL);
+    char p_Base64[us_Base64Len];
+    
+    p_Base64[us_Base64Len - 1] = '\0';
+    
+    char* p_Result = sodium_bin2base64(p_Base64, us_Base64Len,
+                                       p_Bytes, us_Length,
+                                       sodium_base64_VARIANT_ORIGINAL);
+    
+    if (p_Result == NULL)
+    {
+        return "";
+    }
+    
+    // @NOTE: Terminator included
+    return std::string(p_Result);
 }

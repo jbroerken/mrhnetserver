@@ -82,6 +82,9 @@ namespace DatabaseTable
         uint32_t u32_DeviceListID;
     };
     
+    constexpr size_t us_UAMailAddresSize = 128;
+    constexpr size_t us_UAPasswordSize = 256;
+    
     //*************************************************************************************
     // User Device List Table
     //*************************************************************************************
@@ -127,6 +130,8 @@ namespace DatabaseTable
         std::string s_DeviceKey;
     };
     
+    constexpr size_t us_UDLDeviceKeySize = 25;
+    
     //*************************************************************************************
     // Message Data Table
     //*************************************************************************************
@@ -143,11 +148,12 @@ namespace DatabaseTable
     
     enum MDFields
     {
-        MD_USER_ID = 0,
-        MD_DEVICE_KEY = 1,
-        MD_ACTOR_TYPE = 2,
-        MD_MESSAGE_TYPE = 3,
-        MD_MESSAGE_DATA = 4,
+        MD_MESSAGE_ID = 0,
+        MD_USER_ID = 1,
+        MD_DEVICE_KEY = 2,
+        MD_ACTOR_TYPE = 3,
+        MD_MESSAGE_TYPE = 4,
+        MD_MESSAGE_DATA = 5,
         
         MD_FIELDS_MAX = MD_MESSAGE_DATA,
         MD_FIELDS_COUNT = MD_FIELDS_MAX + 1
@@ -155,6 +161,7 @@ namespace DatabaseTable
     
     constexpr const char* p_MDFieldName[MD_FIELDS_COUNT] =
     {
+        "message_id",
         "user_id",
         "device_key",
         "actor_type",
@@ -174,12 +181,16 @@ namespace DatabaseTable
         // Data
         //*************************************************************************************
         
+        uint32_t u32_MessageID;
         uint32_t u32_UserID;
         std::string s_DeviceKey;
         uint8_t u8_ActorType;
         uint8_t u8_MessageType;
         std::string s_MessageData;
     };
+    
+    constexpr size_t us_MDDeviceKeySize = 25;
+    constexpr size_t us_MDMessageDataSize = 2048;
 }
 
 #endif /* DatabaseTable_h */

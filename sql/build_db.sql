@@ -54,12 +54,13 @@ DROP TABLE IF EXISTS `message_data`;
 
 CREATE TABLE `message_data` 
 (
+    `message_id` bigint unsigned NOT NULL UNIQUE AUTO_INCREMENT COMMENT 'Unique message identification',
     `user_id` int unsigned NOT NULL COMMENT 'User identifier',
     `device_key` varchar(25) NOT NULL DEFAULT '' COMMENT 'User assigned device key',
     `actor_type` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'Actor origin',
-    `timestamp_s` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'Message recieved time stamp',
     `message_type` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'Message type',
     `message_data` varchar(2048) NOT NULL DEFAULT '' COMMENT 'Message data',
+    PRIMARY KEY (`message_id`),
     FOREIGN KEY (`user_id`) REFERENCES user_account(`user_id`)
 ) 
 DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Recieved and currently held message data';

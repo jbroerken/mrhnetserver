@@ -68,7 +68,6 @@ namespace ClientAuthentication
      */
     
     NetMessage HandleAuthProof(MSG_AUTH_PROOF_DATA c_Proof, Database& c_Database, UserInfo& c_UserInfo) noexcept;
-    
 }
 
 #endif /* ClientAuthentication_h */

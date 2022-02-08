@@ -1,5 +1,5 @@
 /**
- *  Client.cpp
+ *  ClientAuthentication.cpp
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -27,6 +27,7 @@
 // Project
 #include "./ClientAuthentication.h"
 #include "./Base64.h"
+#include "../../Logger.h"
 
 // Pre-defined
 using namespace DatabaseTable;
@@ -34,7 +35,7 @@ using namespace mysqlx;
 
 
 //*************************************************************************************
-// Auth Request
+// Auth Result
 //*************************************************************************************
 
 static NetMessage CreateAuthResult(uint8_t u8_Result) noexcept
@@ -135,13 +136,11 @@ NetMessage ClientAuthentication::HandleAuthRequest(MSG_AUTH_REQUEST_DATA c_Reque
                                      .where(std::string(p_UDLFieldName[UDL_USER_ID]) +
                                             " == :value")
                                      .bind("value",
-                                           std::to_string(c_UserInfo.u32_UserID))
+                                           c_UserInfo.u32_UserID)
                                      .execute();
         
-        size_t i = 0;
         size_t us_Count = c_Result.count();
-        
-        for (; i < us_Count; ++i)
+        for (; us_Count > 0; --us_Count)
         {
             if (c_Result.fetchOne()[1].get<std::string>().compare(c_UserInfo.s_DeviceKey) == 0)
             {
@@ -150,7 +149,7 @@ NetMessage ClientAuthentication::HandleAuthRequest(MSG_AUTH_REQUEST_DATA c_Reque
         }
         
         // Not found, send error
-        if (i == us_Count)
+        if (us_Count == 0)
         {
             c_UserInfo.s_Password = "";
             return CreateAuthResult(NetMessage::ERR_SA_NO_DEVICE);
@@ -214,6 +213,15 @@ NetMessage ClientAuthentication::HandleAuthProof(MSG_AUTH_PROOF_DATA c_Proof, Da
     }
     
     // We are now authenticated
+    Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
+                                          std::to_string(c_UserInfo.u32_UserID) +
+                                          ", Device Key: " +
+                                          c_UserInfo.s_DeviceKey +
+                                          ", Client Type: " +
+                                          std::to_string(c_UserInfo.u8_ClientType) +
+                                          "): Authenticated.",
+                            "ClientAuthentication.cpp", __LINE__);
+    
     c_UserInfo.b_Authenticated = true;
     return c_Result;
 }
