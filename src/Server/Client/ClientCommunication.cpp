@@ -38,6 +38,24 @@ using namespace mysqlx;
 
 
 //*************************************************************************************
+// Table Name
+//*************************************************************************************
+
+static inline const char* MessageTableName(uint8_t u8_Type) noexcept
+{
+    switch (u8_Type)
+    {
+        case NetMessage::MSG_TEXT:
+            return p_MDTextTableName;
+        case NetMessage::MSG_LOCATION:
+            return p_MDLocationTableName;
+            
+        default:
+            return NULL;
+    }
+}
+
+//*************************************************************************************
 // Retrieve
 //*************************************************************************************
 
@@ -54,6 +72,7 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
     std::list<NetMessage> l_Result;
     Logger& c_Logger = Logger::Singleton();
     
+    // Get the sender based on the reciever
     uint8_t u8_ActorType;
     
     switch (c_UserInfo.u8_ClientType)
@@ -73,27 +92,37 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
             return l_Result;
     }
     
+    // Get the table to insert into
+    const char* p_TableName = MessageTableName(u8_Type);
+    
+    if (p_TableName == NULL)
+    {
+        Logger::Singleton().Log(Logger::ERROR, "No table for message data!",
+                                "ClientCommunication.cpp", __LINE__);
+        
+        l_Result.emplace_back(CreateNoData(u8_Type));
+        return l_Result;
+    }
+    
+    // Got all required, read
     try
     {
         Table c_Table = c_Database.c_Session
                             .getSchema(c_Database.s_Database)
-                            .getTable(p_MDTableName);
+                            .getTable(p_TableName);
         
         RowResult c_Result = c_Table
                                 .select(p_MDFieldName[MD_MESSAGE_ID],      /* 0 */
                                         p_MDFieldName[MD_USER_ID],         /* 1 */
                                         p_MDFieldName[MD_DEVICE_KEY],      /* 2 */
                                         p_MDFieldName[MD_ACTOR_TYPE],      /* 3 */
-                                        p_MDFieldName[MD_MESSAGE_TYPE],    /* 4 */
-                                        p_MDFieldName[MD_MESSAGE_DATA])    /* 5 */
+                                        p_MDFieldName[MD_MESSAGE_DATA])    /* 4 */
                                 .where(std::string(p_MDFieldName[MD_USER_ID]) +
                                        " == :valueA AND " +
                                        p_MDFieldName[MD_DEVICE_KEY] +
                                        " == :valueB AND " +
                                        p_MDFieldName[MD_ACTOR_TYPE] +
-                                       " == :valueC AND " +
-                                       p_MDFieldName[MD_MESSAGE_TYPE] +
-                                       " == :valueD")
+                                       " == :valueC")
                                 .limit(CLIENT_COMMUNICATION_RETRIEVE_LIMIT)
                                 .bind("valueA",
                                       c_UserInfo.u32_UserID)
@@ -101,8 +130,6 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
                                       c_UserInfo.s_DeviceKey)
                                 .bind("valueC",
                                       u8_ActorType)
-                                .bind("valueD",
-                                      u8_Type)
                                 .execute();
         
         std::string s_Bin;
@@ -113,7 +140,7 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
             // Decode base64
             Row c_Row = c_Result.fetchOne();
             
-            s_Bin = Base64::ToBytes(c_Row[5].get<std::string>());
+            s_Bin = Base64::ToBytes(c_Row[4].get<std::string>());
             
             if (s_Bin.size() > 0)
             {
@@ -169,11 +196,21 @@ void ClientCommunication::StoreMessage(NetMessage const& c_NetMessage, Database&
         return;
     }
     
+    // Get the table to insert into
+    const char* p_TableName = MessageTableName(c_NetMessage.GetID());
+    
+    if (p_TableName == NULL)
+    {
+        Logger::Singleton().Log(Logger::ERROR, "No table for message data!",
+                                "ClientCommunication.cpp", __LINE__);
+        return;
+    }
+    
     // Convert message data to base64
     std::string s_Base64 = Base64::ToString(&(c_NetMessage.v_Data[NetMessage::us_DataPos]),
                                             c_NetMessage.v_Data.size() - NetMessage::us_DataPos);
     
-    if (s_Base64.size() == 0)
+    if (s_Base64.size() == 0 || s_Base64.size() > us_MDMessageDataSize)
     {
         Logger::Singleton().Log(Logger::ERROR, "Failed to encode message as base64!",
                                 "ClientCommunication.cpp", __LINE__);
@@ -185,16 +222,14 @@ void ClientCommunication::StoreMessage(NetMessage const& c_NetMessage, Database&
     {
         c_Database.c_Session
             .getSchema(c_Database.s_Database)
-            .getTable(p_MDTableName)
+            .getTable(p_TableName)
             .insert(DatabaseTable::p_MDFieldName[DatabaseTable::MD_USER_ID],
                     DatabaseTable::p_MDFieldName[DatabaseTable::MD_DEVICE_KEY],
                     DatabaseTable::p_MDFieldName[DatabaseTable::MD_ACTOR_TYPE],
-                    DatabaseTable::p_MDFieldName[DatabaseTable::MD_MESSAGE_TYPE],
                     DatabaseTable::p_MDFieldName[DatabaseTable::MD_MESSAGE_DATA])
             .values(c_UserInfo.u32_UserID,
                     c_UserInfo.s_DeviceKey,
                     c_UserInfo.u8_ClientType,
-                    c_NetMessage.v_Data[0],
                     s_Base64.c_str())
             .execute();
     }

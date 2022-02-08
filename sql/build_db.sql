@@ -47,20 +47,37 @@ DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Known user devices';
 
 
 --
--- Message Data
+-- Text Message
 --
 
-DROP TABLE IF EXISTS `message_data`;
+DROP TABLE IF EXISTS `message_text`;
 
-CREATE TABLE `message_data` 
+CREATE TABLE `message_text` 
 (
     `message_id` bigint unsigned NOT NULL UNIQUE AUTO_INCREMENT COMMENT 'Unique message identification',
     `user_id` int unsigned NOT NULL COMMENT 'User identifier',
     `device_key` varchar(25) NOT NULL DEFAULT '' COMMENT 'User assigned device key',
     `actor_type` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'Actor origin',
-    `message_type` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'Message type',
     `message_data` varchar(2048) NOT NULL DEFAULT '' COMMENT 'Message data',
     PRIMARY KEY (`message_id`),
     FOREIGN KEY (`user_id`) REFERENCES user_account(`user_id`)
 ) 
-DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Recieved and currently held message data';
+DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Recieved and currently held text messages';
+
+--
+-- Location Message
+--
+
+DROP TABLE IF EXISTS `message_location`;
+
+CREATE TABLE `message_location` 
+(
+    `message_id` bigint unsigned NOT NULL UNIQUE AUTO_INCREMENT COMMENT 'Unique message identification',
+    `user_id` int unsigned NOT NULL COMMENT 'User identifier',
+    `device_key` varchar(25) NOT NULL DEFAULT '' COMMENT 'User assigned device key',
+    `actor_type` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'Actor origin',
+    `message_data` varchar(2048) NOT NULL DEFAULT '' COMMENT 'Message data',
+    PRIMARY KEY (`message_id`),
+    FOREIGN KEY (`user_id`) REFERENCES user_account(`user_id`)
+) 
+DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='Recieved and currently held location messages';

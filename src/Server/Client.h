@@ -24,7 +24,9 @@
 
 // C / C++
 #include <mutex>
+#include <deque>
 #include <list>
+#include <utility>
 
 // External
 #include <msquic.h>
@@ -107,6 +109,34 @@ public:
 private:
     
     //*************************************************************************************
+    // Types
+    //*************************************************************************************
+    
+    struct Recieved
+    {
+    public:
+        
+        //*************************************************************************************
+        // Constructor
+        //*************************************************************************************
+        
+        /**
+         *  Default destructor.
+         *
+         *  \param c_Data The net message data to add.
+         */
+    
+        Recieved(StreamData& c_Data);
+        
+        //*************************************************************************************
+        // Disconnect
+        //*************************************************************************************
+        
+        std::mutex c_Mutex;
+        NetMessage c_Message;
+    };
+    
+    //*************************************************************************************
     // Disconnect
     //*************************************************************************************
     
@@ -130,16 +160,20 @@ private:
     // Data
     //*************************************************************************************
     
-    // Thread
-    std::mutex c_Mutex;
+    // Perform
+    std::mutex c_PerformMutex; // Stop multiple job threads
     
-    // Net Message
-    std::list<NetMessage> l_Recieved;
+    // Recieve
+    std::deque<Recieved> dq_Recieved;
+    std::atomic<size_t> us_RecievedCount; // Recieved is modified by multiple threads
+    std::mutex c_RecievedMutex; // Lock on list modification
+    
+    // Send
     std::list<NetMessage> l_Send;
     
     // MsQuic
     const QUIC_API_TABLE* p_APITable;
-    HQUIC p_Connection;
+    std::atomic<HQUIC> p_Connection; // Connection is accessed by msquic threads and job
     std::list<StreamData> l_StreamData;
     
     // User

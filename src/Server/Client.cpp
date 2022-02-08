@@ -51,12 +51,16 @@ Client::Client(const QUIC_API_TABLE* p_APITable,
 Client::~Client() noexcept
 {}
 
+Client::Recieved::Recieved(StreamData& c_Data) : c_Message(c_Data.v_Bytes)
+{}
+
 //*************************************************************************************
 // Disconnect
 //*************************************************************************************
 
 void Client::Disconnected() noexcept
 {
+#if CLIENT_EXTENDED_LOGGING > 0
     Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
                                           std::to_string(c_UserInfo.u32_UserID) +
                                           ", Device Key: " +
@@ -65,8 +69,8 @@ void Client::Disconnected() noexcept
                                           std::to_string(c_UserInfo.u8_ClientType) +
                                           "): Disconnected.",
                             "Client.cpp", __LINE__);
+#endif
     
-    std::lock_guard<std::mutex> c_Guard(c_Mutex);
     p_Connection = NULL;
 }
 
@@ -99,124 +103,128 @@ void Client::Disconnect() noexcept
 
 bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
 {
-    // @NOTE: Same client might be in different threads due to
-    //        multiple added recieved messages!
-    //        We also can't simply return a finished result because
-    //        the current working thread might already past some
-    //        change which needs work!
-    if (c_Mutex.try_lock() == false)
+    if (p_Connection == NULL)
     {
+        // @NOTE: Return success, connection dead and
+        //        nothing left to do.
+        return true;
+    }
+    else if (c_PerformMutex.try_lock() == false)
+    {
+        // @NOTE: Same client might be in different threads due to
+        //        multiple added recieved messages!
+        //        We also can't simply return a finished result because
+        //        the current working thread might already past some
+        //        change which needs work!
         return false;
     }
     
     // Grab and process recieved messages
-    if (l_Recieved.size() > 0)
+    for (size_t i = 0; i < us_RecievedCount; ++i)
     {
+        // Can we work on this message?
+        if (dq_Recieved[i].c_Mutex.try_lock() == false)
+        {
+            // Data is currently added by recieve()
+            continue;
+        }
+        else if (dq_Recieved[i].c_Message.v_Data.size() == 0)
+        {
+            // This message is empty
+            dq_Recieved[i].c_Mutex.unlock();
+            continue;
+        }
+        
+        // This message is usable, work on it
+        auto& Recieved = dq_Recieved[i].c_Message;
+        
         try
         {
-            
             Database& c_Database = dynamic_cast<Database&>(*(p_Shared.get()));
-            bool b_Disconnect = false;
             
-            for (auto It = l_Recieved.begin(); It != l_Recieved.end();)
+            switch (Recieved.GetID())
             {
-                switch (It->GetID())
-                {
-                    /**
-                     *  Net Message Version 1
-                     */
-                    
-                    // Server Auth
-                    case NetMessage::MSG_AUTH_REQUEST:
-                    {
-                        NetMessage c_Result = HandleAuthRequest(ToData<MSG_AUTH_REQUEST_DATA>(It->v_Data),
-                                                                c_Database,
-                                                                c_UserInfo);
-                        
-                        // We should recieve MSG_AUTH_CHALLENGE on success
-                        if (c_Result.GetID() == NetMessage::MSG_AUTH_RESULT)
-                        {
-                            b_Disconnect = true;
-                        }
-                        
-                        l_Send.emplace_back(c_Result);
-                        break;
-                    }
-                    case NetMessage::MSG_AUTH_PROOF:
-                    {
-                        NetMessage c_Result = HandleAuthProof(ToData<MSG_AUTH_PROOF_DATA>(It->v_Data),
-                                                              c_Database,
-                                                              c_UserInfo);
-                        
-                        // Our proof result is an error? (Pos 1, uint8_t)
-                        if (c_Result.v_Data[NetMessage::us_DataPos] != NetMessage::ERR_NONE)
-                        {
-                            b_Disconnect = true;
-                        }
-                        
-                        l_Send.emplace_back(c_Result);
-                        break;
-                    }
-                        
-                    // Communication
-                    case NetMessage::MSG_DATA_AVAIL:
-                    {
-                        if (c_UserInfo.b_Authenticated == false)
-                        {
-                            b_Disconnect = true;
-                            break;
-                        }
-                        
-                        // @NOTE: Pos 1 of MSG_DATA_AVAIL is the message type requested (uint8_t)!
-                        std::list<NetMessage> l_Message = ClientCommunication::RetrieveMessages(It->v_Data[NetMessage::us_DataPos],
-                                                                                                c_Database,
-                                                                                                c_UserInfo);
-                        
-                        for (auto& Message : l_Message)
-                        {
-                            l_Send.emplace_back(Message);
-                        }
-                        break;
-                    }
-                    case NetMessage::MSG_TEXT:
-                    case NetMessage::MSG_LOCATION:
-                    {
-                        if (c_UserInfo.b_Authenticated == false)
-                        {
-                            b_Disconnect = true;
-                            break;
-                        }
-                        
-                        ClientCommunication::StoreMessage(*(It),
-                                                          c_Database,
-                                                          c_UserInfo);
-                        break;
-                    }
-                    case NetMessage::MSG_NOTIFICATION: { break; } // NYI
-                    case NetMessage::MSG_CUSTOM: { break; } // NYI
-                        
-                    /**
-                     *  Unk
-                     */
-                        
-                    default:
-                    {
-                        b_Disconnect = true;
-                        break;
-                    }
-                }
+                /**
+                 *  Net Message Version 1
+                 */
                 
-                if (b_Disconnect == true)
+                // Server Auth
+                case NetMessage::MSG_AUTH_REQUEST:
                 {
-                    // Clear all, no reciever for answers
-                    l_Recieved.clear();
-                    Disconnect();
+                    NetMessage c_Result = HandleAuthRequest(ToData<MSG_AUTH_REQUEST_DATA>(Recieved.v_Data),
+                                                            c_Database,
+                                                            c_UserInfo);
+                    
+                    // We should recieve MSG_AUTH_CHALLENGE on success
+                    if (c_Result.GetID() == NetMessage::MSG_AUTH_RESULT)
+                    {
+                        Disconnect();
+                    }
+                    
+                    l_Send.emplace_back(c_Result);
                     break;
                 }
-                else
+                case NetMessage::MSG_AUTH_PROOF:
                 {
-                    // Message handled, remove
-                    It = l_Recieved.erase(It);
+                    NetMessage c_Result = HandleAuthProof(ToData<MSG_AUTH_PROOF_DATA>(Recieved.v_Data),
+                                                          c_Database,
+                                                          c_UserInfo);
+                    
+                    // Our proof result is an error? (Pos 1, uint8_t)
+                    if (c_Result.v_Data[NetMessage::us_DataPos] != NetMessage::ERR_NONE)
+                    {
+                        Disconnect();
+                    }
+                    
+                    l_Send.emplace_back(c_Result);
+                    break;
+                }
+                    
+                // Communication
+                case NetMessage::MSG_DATA_AVAIL:
+                {
+                    if (c_UserInfo.b_Authenticated == false)
+                    {
+                        Disconnect();
+                        break;
+                    }
+                    
+                    // @NOTE: Pos 1 of MSG_DATA_AVAIL is the message type requested (uint8_t)!
+                    std::list<NetMessage> l_Message = ClientCommunication::RetrieveMessages(Recieved.v_Data[NetMessage::us_DataPos],
+                                                                                            c_Database,
+                                                                                            c_UserInfo);
+                    
+                    for (auto& Message : l_Message)
+                    {
+                        l_Send.emplace_back(Message);
+                    }
+                    break;
+                }
+                case NetMessage::MSG_TEXT:
+                case NetMessage::MSG_LOCATION:
+                {
+                    if (c_UserInfo.b_Authenticated == false)
+                    {
+                        Disconnect();
+                        break;
+                    }
+                    
+                    ClientCommunication::StoreMessage(Recieved,
+                                                      c_Database,
+                                                      c_UserInfo);
+                    break;
+                }
+                case NetMessage::MSG_NOTIFICATION: { break; } // NYI
+                case NetMessage::MSG_CUSTOM: { break; } // NYI
+                    
+                /**
+                 *  Unk
+                 */
+                    
+                default:
+                {
+                    Disconnect();
+                    break;
                 }
             }
         }
@@ -226,6 +234,10 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                                                    std::string(e.what()),
                                     "Client.cpp", __LINE__);
         }
+        
+        // Recieved message processed, set free
+        dq_Recieved[i].c_Message.v_Data.clear();
+        dq_Recieved[i].c_Mutex.unlock();
     }
     
     // Processed recieved messages, now send
@@ -243,7 +255,8 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
         b_Result = false;
     }
     
-    c_Mutex.unlock();
+    // Unlock for other threads
+    c_PerformMutex.unlock();
     
     // Return finished or retry
     // @NOTE: On disconnected we send true, can't work on a
@@ -272,9 +285,40 @@ void Client::Recieve(StreamData& c_Data) noexcept
                                 "Client.cpp", __LINE__);
 #endif
     
+    // Try to replace a unused message
+    for (size_t i = 0; i < us_RecievedCount; ++i)
+    {
+        // Can we work on this message?
+        auto& Entry = dq_Recieved[i];
+        
+        if (Entry.c_Mutex.try_lock() == false)
+        {
+            // Message is currently processed by perform()
+            continue;
+        }
+        else if (Entry.c_Message.v_Data.size() != 0)
+        {
+            // Message is not empty
+            Entry.c_Mutex.unlock();
+            continue;
+        }
+        
+        // Message is replaceable
+        // @NOTE: Swap is ok, bytes of stream data are recreated!
+        Entry.c_Message.v_Data.swap(c_Data.v_Bytes);
+        Entry.c_Mutex.unlock();
+        
+        return;
+    }
+    
+    // No free space, add new
     try
     {
-        l_Recieved.emplace_back(c_Data.v_Bytes);
+        c_RecievedMutex.lock();
+        dq_Recieved.emplace_back(c_Data);
+        c_RecievedMutex.unlock();
+        
+        us_RecievedCount += 1;
     }
     catch (std::exception& e)
     {

@@ -30,6 +30,10 @@
 #include "../../Logger.h"
 
 // Pre-defined
+#ifndef CLIENT_EXTENDED_LOGGING
+    #define CLIENT_EXTENDED_LOGGING 1//0
+#endif
+
 using namespace DatabaseTable;
 using namespace mysqlx;
 
@@ -38,7 +42,7 @@ using namespace mysqlx;
 // Auth Result
 //*************************************************************************************
 
-static NetMessage CreateAuthResult(uint8_t u8_Result) noexcept
+static inline NetMessage CreateAuthResult(uint8_t u8_Result) noexcept
 {
     MSG_AUTH_RESULT_DATA c_Result;
     c_Result.u8_Result = u8_Result;
@@ -213,6 +217,7 @@ NetMessage ClientAuthentication::HandleAuthProof(MSG_AUTH_PROOF_DATA c_Proof, Da
     }
     
     // We are now authenticated
+#if CLIENT_EXTENDED_LOGGING > 0
     Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
                                           std::to_string(c_UserInfo.u32_UserID) +
                                           ", Device Key: " +
@@ -221,6 +226,7 @@ NetMessage ClientAuthentication::HandleAuthProof(MSG_AUTH_PROOF_DATA c_Proof, Da
                                           std::to_string(c_UserInfo.u8_ClientType) +
                                           "): Authenticated.",
                             "ClientAuthentication.cpp", __LINE__);
+#endif
     
     c_UserInfo.b_Authenticated = true;
     return c_Result;

@@ -140,7 +140,8 @@ namespace DatabaseTable
      *  Table Name
      */
     
-    constexpr const char* p_MDTableName = "message_data";
+    constexpr const char* p_MDTextTableName = "message_text";
+    constexpr const char* p_MDLocationTableName = "message_location";
     
     /**
      *  Field Names
@@ -152,8 +153,7 @@ namespace DatabaseTable
         MD_USER_ID = 1,
         MD_DEVICE_KEY = 2,
         MD_ACTOR_TYPE = 3,
-        MD_MESSAGE_TYPE = 4,
-        MD_MESSAGE_DATA = 5,
+        MD_MESSAGE_DATA = 4,
         
         MD_FIELDS_MAX = MD_MESSAGE_DATA,
         MD_FIELDS_COUNT = MD_FIELDS_MAX + 1
@@ -165,7 +165,6 @@ namespace DatabaseTable
         "user_id",
         "device_key",
         "actor_type",
-        "message_type",
         "message_data"
     };
     
@@ -185,7 +184,6 @@ namespace DatabaseTable
         uint32_t u32_UserID;
         std::string s_DeviceKey;
         uint8_t u8_ActorType;
-        uint8_t u8_MessageType;
         std::string s_MessageData;
     };
     
