@@ -31,7 +31,7 @@
 
 // Pre-defined
 #ifndef CLIENT_EXTENDED_LOGGING
-    #define CLIENT_EXTENDED_LOGGING 1//0
+    #define CLIENT_EXTENDED_LOGGING 0
 #endif
 
 using namespace DatabaseTable;

@@ -1,5 +1,5 @@
 /**
- *  ConnectionContext.h
+ *  StreamSendContext.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,22 +19,19 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef ConnectionContext_h
-#define ConnectionContext_h
+#ifndef StreamSendContext_h
+#define StreamSendContext_h
 
 // C / C++
-#include <memory>
 
 // External
 #include <msquic.h>
 
 // Project
-#include "./StreamRecieveContext.h"
-#include "./ClientConnections.h"
-#include "../Client.h"
+#include "./StreamData.h"
 
 
-struct ConnectionContext
+struct StreamSendContext
 {
 public:
     
@@ -46,35 +43,18 @@ public:
      *  Default constructor.
      *
      *  \param p_APITable The library api table.
-     *  \param p_Connection The connection handle to manage.
-     *  \param c_JobList The job list to hand to the connection.
-     *  \param c_Connections The client connections information.
      */
     
-    ConnectionContext(const QUIC_API_TABLE* p_APITable,
-                      HQUIC p_Connection,
-                      JobList& c_JobList,
-                      ClientConnections& c_Connections) : p_APITable(p_APITable),
-                                                          p_Connection(p_Connection),
-                                                          c_Connections(c_Connections),
-                                                          c_JobList(c_JobList)
-    {
-        p_Client = std::make_shared<Client>(p_APITable,
-                                            p_Connection);
-    }
+    StreamSendContext(const QUIC_API_TABLE* p_APITable) noexcept : p_APITable(p_APITable)
+    {}
     
     //*************************************************************************************
-    // Data
+    // Types
     //*************************************************************************************
     
     const QUIC_API_TABLE* p_APITable;
-    HQUIC p_Connection;
     
-    ClientConnections& c_Connections;
-    std::shared_ptr<Client> p_Client;
-    JobList& c_JobList;
-    
-    std::list<StreamRecieveContext> l_Recieved;
+    StreamData c_Data;
 };
 
-#endif /* ConnectionContext_h */
+#endif /* StreamSendContext_h */

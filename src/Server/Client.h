@@ -32,7 +32,7 @@
 #include <msquic.h>
 
 // Project
-#include "./MsQuic/StreamData.h"
+#include "./MsQuic/StreamSendContext.h"
 #include "./Client/UserInfo.h"
 #include "../NetMessage/NetMessage.h"
 #include "../Job/Job.h"
@@ -163,18 +163,16 @@ private:
     // Perform
     std::mutex c_PerformMutex; // Stop multiple job threads
     
-    // Recieve
+    // Net Message
     std::deque<Recieved> dq_Recieved;
     std::atomic<size_t> us_RecievedCount; // Recieved is modified by multiple threads
     std::mutex c_RecievedMutex; // Lock on list modification
-    
-    // Send
     std::list<NetMessage> l_Send;
     
     // MsQuic
     const QUIC_API_TABLE* p_APITable;
     std::atomic<HQUIC> p_Connection; // Connection is accessed by msquic threads and job
-    std::list<StreamData> l_StreamData;
+    std::list<StreamSendContext> l_StreamContext;
     
     // User
     UserInfo c_UserInfo;

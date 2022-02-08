@@ -32,7 +32,7 @@
 
 // Pre-defined
 #ifndef CLIENT_EXTENDED_LOGGING
-    #define CLIENT_EXTENDED_LOGGING 1//0
+    #define CLIENT_EXTENDED_LOGGING 0
 #endif
 
 using namespace ClientAuthentication;
@@ -45,7 +45,8 @@ using namespace ClientCommunication;
 
 Client::Client(const QUIC_API_TABLE* p_APITable,
                HQUIC p_Connection) noexcept : p_APITable(p_APITable),
-                                              p_Connection(p_Connection)
+                                              p_Connection(p_Connection),
+                                              us_RecievedCount(0)
 {}
 
 Client::~Client() noexcept
@@ -352,51 +353,50 @@ void Client::Send()
 #endif
         
         // Find free stream data first
-        StreamData* p_Data = NULL;
+        StreamSendContext* p_Context = NULL;
         
-        for (auto It = l_StreamData.begin(); It != l_StreamData.end(); ++It)
+        for (auto Context = l_StreamContext.begin(); Context != l_StreamContext.end(); ++Context)
         {
             // Select empty message available
-            if (It->e_State == StreamData::FREE || It->e_State == StreamData::COMPLETED)
+            if (Context->c_Data.e_State == StreamData::FREE || Context->c_Data.e_State == StreamData::COMPLETED)
             {
-                It->e_State = StreamData::IN_USE;
-                p_Data = &(*(It));
-                
+                Context->c_Data.e_State = StreamData::IN_USE;
+                p_Context = &(*(Context));
                 break;
             }
         }
         
         // No data, add new
-        if (p_Data == NULL)
+        if (p_Context == NULL)
         {
-            l_StreamData.emplace_back();
-            p_Data = &(*(--(l_StreamData.end())));
+            l_StreamContext.emplace_back(p_APITable);
+            p_Context = &(*(--(l_StreamContext.end())));
         }
         
         // Add the send data
-        p_Data->v_Bytes.swap(It->v_Data);
+        p_Context->c_Data.v_Bytes.swap(It->v_Data);
         
         // Now we perform the quic buffer setup
-        p_Data->v_Bytes.insert(p_Data->v_Bytes.begin(),
-                               sizeof(QUIC_BUFFER),
-                               0);
+        p_Context->c_Data.v_Bytes.insert(p_Context->c_Data.v_Bytes.begin(),
+                                         sizeof(QUIC_BUFFER),
+                                         0);
         
         QUIC_BUFFER* p_QuicBuffer;
         
-        p_QuicBuffer = (QUIC_BUFFER*)&(p_Data->v_Bytes[0]);
-        p_QuicBuffer->Buffer = &(p_Data->v_Bytes[sizeof(QUIC_BUFFER)]);
-        p_QuicBuffer->Length = p_Data->v_Bytes.size() - sizeof(QUIC_BUFFER);
+        p_QuicBuffer = (QUIC_BUFFER*)&(p_Context->c_Data.v_Bytes[0]);
+        p_QuicBuffer->Buffer = &(p_Context->c_Data.v_Bytes[sizeof(QUIC_BUFFER)]);
+        p_QuicBuffer->Length = p_Context->c_Data.v_Bytes.size() - sizeof(QUIC_BUFFER);
         
         // Buffer is setup, send data
         HQUIC p_Stream;
         
         if (QUIC_FAILED(p_APITable->StreamOpen(p_Connection,
                                                QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL, /* QUIC_STREAM_OPEN_FLAG_NONE, */
-                                               StreamCallback,
-                                               NULL, /* No context for shutdown, etc */
+                                               StreamSendCallback,
+                                               p_Context,
                                                &p_Stream)))
         {
-            p_Data->e_State = StreamData::FREE;
+            p_Context->c_Data.e_State = StreamData::FREE;
             
             throw Exception("Failed to open stream!");
         }
@@ -404,7 +404,7 @@ void Client::Send()
                                                      QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL)))
         {
             p_APITable->StreamClose(p_Stream);
-            p_Data->e_State = StreamData::FREE;
+            p_Context->c_Data.e_State = StreamData::FREE;
             
             throw Exception("Failed to start stream!");
         }
@@ -412,10 +412,10 @@ void Client::Send()
                                                     p_QuicBuffer,
                                                     1,
                                                     QUIC_SEND_FLAG_FIN,
-                                                    p_Data))) /* Send context, allows reset on send complete */
+                                                    NULL)))
         {
             p_APITable->StreamClose(p_Stream);
-            p_Data->e_State = StreamData::FREE;
+            p_Context->c_Data.e_State = StreamData::FREE;
             
             throw Exception("Failed to send on stream!");
         }

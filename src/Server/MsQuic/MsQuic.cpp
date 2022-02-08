@@ -27,7 +27,8 @@
 #include "./MsQuic.h"
 #include "./ListenerContext.h"
 #include "./ConnectionContext.h"
-#include "./StreamContext.h"
+#include "./StreamRecieveContext.h"
+#include "./StreamSendContext.h"
 
 
 //*************************************************************************************
@@ -133,7 +134,7 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
             
         case QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED:
         {
-            StreamContext* p_Stream = NULL;
+            StreamRecieveContext* p_Stream = NULL;
             
             for (auto It = p_Context->l_Recieved.begin(); It != p_Context->l_Recieved.end(); ++It)
             {
@@ -167,7 +168,7 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
             
             // Got context, start callback
             p_Context->p_APITable->SetCallbackHandler(Event->PEER_STREAM_STARTED.Stream,
-                                                      (void*)StreamCallback,
+                                                      (void*)StreamRecieveCallback,
                                                       p_Stream);
             break;
         }
@@ -186,18 +187,12 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Function_class_(QUIC_STREAM_CALLBACK)
-QUIC_STATUS QUIC_API StreamCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event)
+QUIC_STATUS QUIC_API StreamRecieveCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event)
 {
-    StreamContext* p_Context = (StreamContext*)Context;
+    StreamRecieveContext* p_Context = (StreamRecieveContext*)Context;
     
     switch (Event->Type)
     {
-        case QUIC_STREAM_EVENT_SEND_COMPLETE:
-        {
-            ((StreamData*)(Event->SEND_COMPLETE.ClientContext))->e_State = StreamData::COMPLETED; // Can be used for sending again
-            break;
-        }
-            
         case QUIC_STREAM_EVENT_RECEIVE:
         {
             for (uint32_t i = 0; i < Event->RECEIVE.BufferCount; ++i)
@@ -239,10 +234,36 @@ QUIC_STATUS QUIC_API StreamCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _
             
         case QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE:
         {
-            if (p_Context != NULL)
-            {
-                p_Context->p_APITable->StreamClose(Stream);
-            }
+            p_Context->p_APITable->StreamClose(Stream);
+            break;
+        }
+            
+        default: { break; }
+    }
+    
+    return QUIC_STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+_Function_class_(QUIC_STREAM_CALLBACK)
+QUIC_STATUS QUIC_API StreamSendCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event)
+{
+    StreamSendContext* p_Context = (StreamSendContext*)Context;
+    
+    switch (Event->Type)
+    {
+        case QUIC_STREAM_EVENT_SEND_COMPLETE:
+        {
+            p_Context->c_Data.e_State = StreamData::COMPLETED; // Can be used for sending again
+            p_Context->p_APITable->StreamShutdown(Stream,
+                                                  QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL,
+                                                  0);
+            break;
+        }
+            
+        case QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE:
+        {
+            p_Context->p_APITable->StreamClose(Stream);
             break;
         }
             

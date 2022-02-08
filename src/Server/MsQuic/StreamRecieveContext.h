@@ -1,5 +1,5 @@
 /**
- *  StreamContext.h
+ *  StreamRecieveContext.h
  *
  *  This file is part of the MRH project.
  *  See the AUTHORS file for Copyright information.
@@ -19,8 +19,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef StreamContext_h
-#define StreamContext_h
+#ifndef StreamRecieveContext_h
+#define StreamRecieveContext_h
 
 // C / C++
 #include <atomic>
@@ -36,7 +36,7 @@
 #include "../Client.h"
 
 
-struct StreamContext
+struct StreamRecieveContext
 {
 public:
     
@@ -53,13 +53,13 @@ public:
      *  \param c_JobList The job list to hand to the connection.
      */
     
-    StreamContext(const QUIC_API_TABLE* p_APITable,
-                  HQUIC p_Connection,
-                  std::shared_ptr<Client>& p_Client,
-                  JobList& c_JobList) noexcept : p_APITable(p_APITable),
-                                                 p_Connection(p_Connection),
-                                                 p_Client(p_Client),
-                                                 c_JobList(c_JobList)
+    StreamRecieveContext(const QUIC_API_TABLE* p_APITable,
+                         HQUIC p_Connection,
+                         std::shared_ptr<Client>& p_Client,
+                         JobList& c_JobList) noexcept : p_APITable(p_APITable),
+                                                        p_Connection(p_Connection),
+                                                        p_Client(p_Client),
+                                                        c_JobList(c_JobList)
     {}
     
     //*************************************************************************************
@@ -75,4 +75,4 @@ public:
     StreamData c_Data;
 };
 
-#endif /* StreamContext_h */
+#endif /* StreamRecieveContext_h */

@@ -71,7 +71,7 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
 //*************************************************************************************
 
 /**
- *  MsQuic server stream callback.
+ *  MsQuic server stream recieve callback.
  *
  *  \param Stream The stream for the callback.
  *  \param Context The provided stream context.
@@ -82,7 +82,21 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Function_class_(QUIC_STREAM_CALLBACK)
-QUIC_STATUS QUIC_API StreamCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event);
+QUIC_STATUS QUIC_API StreamRecieveCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event);
+
+/**
+ *  MsQuic server stream send callback.
+ *
+ *  \param Stream The stream for the callback.
+ *  \param Context The provided stream context.
+ *  \param Event The recieved stream event.
+ *
+ *  \return The callback result.
+ */
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+_Function_class_(QUIC_STREAM_CALLBACK)
+QUIC_STATUS QUIC_API StreamSendCallback(_In_ HQUIC Stream, _In_opt_ void* Context, _Inout_ QUIC_STREAM_EVENT* Event);
 
 
 #endif /* MsQuic_h */
