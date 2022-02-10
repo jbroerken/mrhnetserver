@@ -43,14 +43,13 @@ namespace ClientCommunication
     /**
      *  Retrieve all sendable communication messages.
      *
-     *  \param u8_Type The message type to recieve.
      *  \param c_Database The database to use.
      *  \param c_UserInfo The user info to use.
      *
-     *  \return The sendable communication net messages.
+     *  \return The sendable communication net message.
      */
     
-    std::list<NetMessage> RetrieveMessages(uint8_t u8_Type, Database& c_Database, UserInfo const& c_UserInfo) noexcept;
+    NetMessage RetrieveMessage(Database& c_Database, UserInfo const& c_UserInfo) noexcept;
     
     //*************************************************************************************
     // Store

@@ -182,7 +182,7 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                 }
                     
                 // Communication
-                case NetMessage::MSG_DATA_AVAIL:
+                case NetMessage::MSG_GET_DATA:
                 {
                     if (c_UserInfo.b_Authenticated == false)
                     {
@@ -190,15 +190,8 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                         break;
                     }
                     
-                    // @NOTE: Pos 1 of MSG_DATA_AVAIL is the message type requested (uint8_t)!
-                    std::list<NetMessage> l_Message = ClientCommunication::RetrieveMessages(Recieved.v_Data[NetMessage::us_DataPos],
-                                                                                            c_Database,
-                                                                                            c_UserInfo);
-                    
-                    for (auto& Message : l_Message)
-                    {
-                        l_Send.emplace_back(Message);
-                    }
+                    l_Send.emplace_back(ClientCommunication::RetrieveMessage(c_Database,
+                                                                             c_UserInfo));
                     break;
                 }
                 case NetMessage::MSG_TEXT:

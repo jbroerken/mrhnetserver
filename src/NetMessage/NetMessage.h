@@ -71,8 +71,9 @@ public:
         MSG_AUTH_RESULT = 4,                // Auth result
         
         // Communication
-        MSG_DATA_AVAIL = 5,                 // Client requests data
-        MSG_NO_DATA = 6,                    // No data available
+        MSG_DATA_AVAIL = 5,                 // Data available to get
+        MSG_GET_DATA = 6,                   // Request data
+        MSG_NO_DATA = 7,                    // No data available
         MSG_TEXT,                           // Text data
         MSG_LOCATION,                       // Location data
         MSG_NOTIFICATION,                   // Push notification

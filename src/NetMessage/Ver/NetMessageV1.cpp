@@ -52,8 +52,6 @@ namespace
                                              sizeof(uint8_t);       /* Net Message Version */
     constexpr size_t us_MsgAuthProofSize = NetMessage::us_DataPos +
                                            us_SizeNonceHash;
-    constexpr size_t us_MsgDataAvailSize = NetMessage::us_DataPos +
-                                           sizeof(uint8_t);         /* Data Type */
     constexpr size_t us_MsgNotificationSize = NetMessage::us_DataPos +
                                               us_SizeNotificationString;
     
@@ -64,8 +62,6 @@ namespace
                                                sizeof(uint8_t);     /* Hash Type */
     constexpr size_t us_MsgAuthSateSize = NetMessage::us_DataPos +
                                           sizeof(uint8_t);          /* Auth State Result */
-    constexpr size_t us_MsgNoDataSize = NetMessage::us_DataPos +
-                                        sizeof(uint8_t);            /* Data Type */
     
 }
 
@@ -115,21 +111,6 @@ template<> MSG_AUTH_PROOF_DATA NetMessageV1::ToData(std::vector<uint8_t> const& 
     memcpy(&(c_Data.p_NonceHash[0]),
            &(v_Buffer[us_Pos]),
            us_SizeNonceHash);
-    
-    return c_Data;
-}
-
-template<> MSG_DATA_AVAIL_DATA NetMessageV1::ToData(std::vector<uint8_t> const& v_Buffer)
-{
-    if (v_Buffer.size() != us_MsgDataAvailSize)
-    {
-        throw Exception("Invalid data buffer!");
-    }
-    
-    MSG_DATA_AVAIL_DATA c_Data;
-    size_t us_Pos = NetMessage::us_IDPos + NetMessage::us_IDSize;
-    
-    c_Data.u8_Data = v_Buffer[us_Pos];
     
     return c_Data;
 }
@@ -199,19 +180,6 @@ template<> std::vector<uint8_t> NetMessageV1::ToBuffer(MSG_AUTH_RESULT_DATA cons
     us_Pos += NetMessage::us_IDSize;
     
     v_Buffer[us_Pos] = Data.u8_Result;
-    
-    return v_Buffer;
-}
-
-template<> std::vector<uint8_t> NetMessageV1::ToBuffer(MSG_NO_DATA_DATA const& Data)
-{
-    std::vector<uint8_t> v_Buffer(us_MsgNoDataSize, '\0');
-    size_t us_Pos = NetMessage::us_IDPos;
-    
-    v_Buffer[NetMessage::us_IDPos] = NetMessage::MSG_NO_DATA;
-    us_Pos += NetMessage::us_IDSize;
-    
-    v_Buffer[us_Pos] = Data.u8_Data;
     
     return v_Buffer;
 }

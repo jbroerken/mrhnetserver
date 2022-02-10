@@ -91,16 +91,6 @@ namespace NetMessageV1
     //  Communication
     //
     
-    struct MSG_DATA_AVAIL_DATA
-    {
-        uint8_t u8_Data; // The type of requested data
-    };
-    
-    struct MSG_NO_DATA_DATA
-    {
-        uint8_t u8_Data; // The type of requested data
-    };
-    
     struct MSG_NOTIFICATION_DATA
     {
         char p_String[us_SizeNotificationString];

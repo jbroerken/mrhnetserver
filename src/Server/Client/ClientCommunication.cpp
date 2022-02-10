@@ -29,47 +29,17 @@
 #include "../../Logger.h"
 
 // Pre-defined
-#ifndef CLIENT_COMMUNICATION_RETRIEVE_LIMIT
-    #define CLIENT_COMMUNICATION_RETRIEVE_LIMIT 32
-#endif
-
 using namespace DatabaseTable;
 using namespace mysqlx;
 
 
-//*************************************************************************************
-// Table Name
-//*************************************************************************************
-
-static inline const char* MessageTableName(uint8_t u8_Type) noexcept
-{
-    switch (u8_Type)
-    {
-        case NetMessage::MSG_TEXT:
-            return p_MDTextTableName;
-        case NetMessage::MSG_LOCATION:
-            return p_MDLocationTableName;
-            
-        default:
-            return NULL;
-    }
-}
 
 //*************************************************************************************
 // Retrieve
 //*************************************************************************************
 
-static NetMessage CreateNoData(uint8_t u8_Type) noexcept
+NetMessage ClientCommunication::RetrieveMessage( Database& c_Database, UserInfo const& c_UserInfo) noexcept
 {
-    NetMessage c_Result(NetMessage::MSG_NO_DATA);
-    c_Result.v_Data.emplace_back(u8_Type);
-    
-    return c_Result;
-}
-
-std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Database& c_Database, UserInfo const& c_UserInfo) noexcept
-{
-    std::list<NetMessage> l_Result;
     Logger& c_Logger = Logger::Singleton();
     
     // Get the sender based on the reciever
@@ -88,20 +58,7 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
             c_Logger.Log(Logger::ERROR, "Unknown client type to retrieve for!",
                          "ClientCommunication.cpp", __LINE__);
             
-            l_Result.emplace_back(CreateNoData(u8_Type));
-            return l_Result;
-    }
-    
-    // Get the table to insert into
-    const char* p_TableName = MessageTableName(u8_Type);
-    
-    if (p_TableName == NULL)
-    {
-        Logger::Singleton().Log(Logger::ERROR, "No table for message data!",
-                                "ClientCommunication.cpp", __LINE__);
-        
-        l_Result.emplace_back(CreateNoData(u8_Type));
-        return l_Result;
+            return NetMessage(NetMessage::MSG_NO_DATA);
     }
     
     // Got all required, read
@@ -109,21 +66,22 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
     {
         Table c_Table = c_Database.c_Session
                             .getSchema(c_Database.s_Database)
-                            .getTable(p_TableName);
+                            .getTable(p_MDTableName);
         
         RowResult c_Result = c_Table
                                 .select(p_MDFieldName[MD_MESSAGE_ID],      /* 0 */
                                         p_MDFieldName[MD_USER_ID],         /* 1 */
                                         p_MDFieldName[MD_DEVICE_KEY],      /* 2 */
                                         p_MDFieldName[MD_ACTOR_TYPE],      /* 3 */
-                                        p_MDFieldName[MD_MESSAGE_DATA])    /* 4 */
+                                        p_MDFieldName[MD_MESSAGE_TYPE],    /* 4 */
+                                        p_MDFieldName[MD_MESSAGE_DATA])    /* 5 */
                                 .where(std::string(p_MDFieldName[MD_USER_ID]) +
                                        " == :valueA AND " +
                                        p_MDFieldName[MD_DEVICE_KEY] +
                                        " == :valueB AND " +
                                        p_MDFieldName[MD_ACTOR_TYPE] +
                                        " == :valueC")
-                                .limit(CLIENT_COMMUNICATION_RETRIEVE_LIMIT)
+                                .limit(1)
                                 .bind("valueA",
                                       c_UserInfo.u32_UserID)
                                 .bind("valueB",
@@ -132,24 +90,21 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
                                       u8_ActorType)
                                 .execute();
         
-        std::string s_Bin;
-        
-        size_t us_Count = c_Result.count();
-        for (; us_Count > 0; --us_Count)
+        if (c_Result.count() > 0)
         {
             // Decode base64
             Row c_Row = c_Result.fetchOne();
             
-            s_Bin = Base64::ToBytes(c_Row[4].get<std::string>());
+            std::string s_Bin = Base64::ToBytes(c_Row[5].get<std::string>());
             
             if (s_Bin.size() > 0)
             {
-                // Add message to list
-                l_Result.emplace_back(u8_Type);
-                
+                NetMessage c_NetMessage(c_Row[4].get<uint32_t>());
                 std::move(s_Bin.begin(),
                           s_Bin.end(),
-                          std::back_inserter(l_Result.back().v_Data));
+                          std::back_inserter(c_NetMessage.v_Data));
+                
+                return c_NetMessage;
             }
             else
             {
@@ -174,12 +129,7 @@ std::list<NetMessage> ClientCommunication::RetrieveMessages(uint8_t u8_Type, Dat
     }
     
     // Got nothing?
-    if (l_Result.size() == 0)
-    {
-        l_Result.emplace_back(CreateNoData(u8_Type));
-    }
-    
-    return l_Result;
+    return NetMessage(NetMessage::MSG_NO_DATA);
 }
 
 //*************************************************************************************
@@ -192,16 +142,6 @@ void ClientCommunication::StoreMessage(NetMessage const& c_NetMessage, Database&
     if (c_NetMessage.v_Data.size() <= NetMessage::us_DataPos)
     {
         Logger::Singleton().Log(Logger::WARNING, "Tried to store message without data!",
-                                "ClientCommunication.cpp", __LINE__);
-        return;
-    }
-    
-    // Get the table to insert into
-    const char* p_TableName = MessageTableName(c_NetMessage.GetID());
-    
-    if (p_TableName == NULL)
-    {
-        Logger::Singleton().Log(Logger::ERROR, "No table for message data!",
                                 "ClientCommunication.cpp", __LINE__);
         return;
     }
@@ -222,14 +162,16 @@ void ClientCommunication::StoreMessage(NetMessage const& c_NetMessage, Database&
     {
         c_Database.c_Session
             .getSchema(c_Database.s_Database)
-            .getTable(p_TableName)
+            .getTable(p_MDTableName)
             .insert(DatabaseTable::p_MDFieldName[DatabaseTable::MD_USER_ID],
                     DatabaseTable::p_MDFieldName[DatabaseTable::MD_DEVICE_KEY],
                     DatabaseTable::p_MDFieldName[DatabaseTable::MD_ACTOR_TYPE],
+                    DatabaseTable::p_MDFieldName[DatabaseTable::MD_MESSAGE_TYPE],
                     DatabaseTable::p_MDFieldName[DatabaseTable::MD_MESSAGE_DATA])
             .values(c_UserInfo.u32_UserID,
                     c_UserInfo.s_DeviceKey,
                     c_UserInfo.u8_ClientType,
+                    c_NetMessage.v_Data[0],
                     s_Base64.c_str())
             .execute();
     }
