@@ -103,13 +103,12 @@ public:
         // No free entry, add a new one
         try
         {
-            c_Mutex.lock(); // Lock for outside multithreading
+            // Lock for outside multithreading
+            std::lock_guard<std::mutex> c_Guard(c_Mutex);
             
             dq_Element.emplace_back(p_Element);
             us_TotalCount += 1;
             us_AvailableCount += 1;
-            
-            c_Mutex.unlock();
         }
         catch (std::exception& e)
         {
@@ -122,33 +121,32 @@ public:
     //*************************************************************************************
     
     /**
-     *  Get the first available list element.
+     *  Get the first available list element. The element will be removed from the list.
      *
-     *  \param b_Remove If the element should be removed.
-     *
-     *  \return The requested element on success, NULL on failure.
+     *  \return The first available list element on success, NULL on failure.
      */
     
-    std::shared_ptr<T> GetElement(bool b_Remove) noexcept
+    std::shared_ptr<T> GetElement() noexcept
     {
         std::shared_ptr<T> p_Result(NULL);
         
         for (size_t i = 0; i < us_TotalCount; ++i)
         {
-            if (dq_Element[i].c_Mutex.try_lock() == true && dq_Element[i].p_Element != NULL)
+            if (dq_Element[i].c_Mutex.try_lock() == false)
             {
-                if (b_Remove == true)
-                {
-                    p_Result.swap(dq_Element[i].p_Element);
-                }
-                else
-                {
-                    p_Result = dq_Element[i].p_Element;
-                }
-                
+                continue;
+            }
+            
+            if (dq_Element[i].p_Element != NULL)
+            {
+                p_Result.swap(dq_Element[i].p_Element);
                 us_AvailableCount -= 1;
-                dq_Element[i].c_Mutex.unlock();
-                
+            }
+            
+            dq_Element[i].c_Mutex.unlock();
+            
+            if (p_Result != NULL)
+            {
                 return p_Result;
             }
         }
@@ -157,21 +155,33 @@ public:
     }
     
     /**
-     *  Get a copy of the list elements.
+     *  Get all available elements. All elements will be removed from the list.
      *
-     *  \param b_Remove If the elements should be removed.
-     *
-     *  \return The list elements.
+     *  \return The available list elements.
      */
     
-    std::list<std::shared_ptr<T>> GetElements(bool b_Remove) noexcept
+    std::list<std::shared_ptr<T>> GetElements() noexcept
     {
         std::list<std::shared_ptr<T>> l_Result;
-        std::shared_ptr<T> p_Element;
         
-        while ((p_Element = GetElement(b_Remove)) != NULL)
+        for (size_t i = 0; i < us_TotalCount; ++i)
         {
-            l_Result.emplace_back(p_Element);
+            if (dq_Element[i].c_Mutex.try_lock() == false)
+            {
+                continue;
+            }
+            
+            if (dq_Element[i].p_Element != NULL)
+            {
+                l_Result.push_back(dq_Element[i].p_Element);
+                
+                dq_Element[i].p_Element.reset();
+                dq_Element[i].p_Element = NULL;
+                
+                us_AvailableCount -= 1;
+            }
+            
+            dq_Element[i].c_Mutex.unlock();
         }
         
         return l_Result;

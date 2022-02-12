@@ -27,7 +27,7 @@
 // External
 
 // Project
-#include "../Job/JobList.h"
+#include "./ClientPool.h"
 #include "./MsQuic/ListenerContext.h"
 
 
@@ -42,10 +42,10 @@ public:
     /**
      *  Default constructor.
      *
-     *  \param c_JobList The job list to add connections to.
+     *  \param c_ClientPool The client pool to add clients to.
      */
     
-    Server(JobList& c_JobList);
+    Server(ClientPool& c_ClientPool);
     
     /**
      *  Copy constructor. Disabled for this class.
@@ -93,8 +93,8 @@ private:
     // Data
     //*************************************************************************************
     
-    // Job List
-    JobList& c_JobList;
+    // Clients
+    ClientPool& c_ClientPool;
     
     // MsQuic
     const QUIC_API_TABLE* p_APITable;

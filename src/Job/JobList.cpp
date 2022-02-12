@@ -62,7 +62,8 @@ void JobList::AddJob(std::shared_ptr<Job> p_Job)
 {
     try
     {
-        c_Job.Add(p_Job);
+        c_JobList.Add(p_Job);
+        c_Condition.notify_one();
     }
     catch (...)
     {
@@ -76,18 +77,20 @@ void JobList::AddJob(std::shared_ptr<Job> p_Job)
 
 std::shared_ptr<Job> JobList::GetJob()
 {
-    std::shared_ptr<Job> p_Result(NULL);
-    
     while (b_Locked == false)
     {
         // Get a job
-        std::shared_ptr<Job> p_Job = c_Job.GetElement(true);
+        std::shared_ptr<Job> p_Job = c_JobList.GetElement();
         
         // No job available, wait for one
         if (p_Job == NULL)
         {
             std::unique_lock<std::mutex> c_Lock(c_Mutex);
             c_Condition.wait(c_Lock);
+        }
+        else
+        {
+            return p_Job;
         }
     }
     

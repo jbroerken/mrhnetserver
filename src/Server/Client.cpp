@@ -44,15 +44,27 @@ using namespace ClientCommunication;
 //*************************************************************************************
 
 Client::Client(const QUIC_API_TABLE* p_APITable,
-               HQUIC p_Connection) noexcept : p_APITable(p_APITable),
+               HQUIC p_Connection,
+               size_t us_ClientID) noexcept : us_ClientID(us_ClientID),
+                                              p_APITable(p_APITable),
                                               p_Connection(p_Connection)
 {}
 
 Client::~Client() noexcept
-{}
-
-Client::Recieved::Recieved(StreamData& c_Data) : c_Message(c_Data.v_Bytes)
-{}
+{
+#if CLIENT_EXTENDED_LOGGING > 0
+    Logger::Singleton().Log(Logger::INFO, "(Client ID: " +
+                                          std::to_string(us_ClientID) +
+                                          ", User ID " +
+                                          std::to_string(c_UserInfo.u32_UserID) +
+                                          ", Device Key: " +
+                                          c_UserInfo.s_DeviceKey +
+                                          ", Client Type: " +
+                                          std::to_string(c_UserInfo.u8_ClientType) +
+                                          "): Destroyed.",
+                            "Client.cpp", __LINE__);
+#endif
+}
 
 //*************************************************************************************
 // Disconnect
@@ -61,7 +73,9 @@ Client::Recieved::Recieved(StreamData& c_Data) : c_Message(c_Data.v_Bytes)
 void Client::Disconnected() noexcept
 {
 #if CLIENT_EXTENDED_LOGGING > 0
-    Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
+    Logger::Singleton().Log(Logger::INFO, "(Client ID: " +
+                                          std::to_string(us_ClientID) +
+                                          ", User ID " +
                                           std::to_string(c_UserInfo.u32_UserID) +
                                           ", Device Key: " +
                                           c_UserInfo.s_DeviceKey +
@@ -111,7 +125,7 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
     // Grab and process recieved messages
     std::shared_ptr<NetMessage> p_Recieved;
     
-    while ((p_Recieved = c_Recieved.GetElement(true)) != NULL)
+    while ((p_Recieved = c_Recieved.GetElement()) != NULL)
     {
         try
         {
@@ -137,7 +151,7 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                         Disconnect();
                     }
                     
-                    l_Send.emplace_back(c_Result);
+                    c_Send.Add(std::make_shared<NetMessage>(c_Result));
                     break;
                 }
                 case NetMessage::MSG_AUTH_PROOF:
@@ -152,7 +166,7 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                         Disconnect();
                     }
                     
-                    l_Send.emplace_back(c_Result);
+                    c_Send.Add(std::make_shared<NetMessage>(c_Result));
                     break;
                 }
                     
@@ -165,8 +179,8 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                         break;
                     }
                     
-                    l_Send.emplace_back(ClientCommunication::RetrieveMessage(c_Database,
-                                                                             c_UserInfo));
+                    c_Send.Add(std::make_shared<NetMessage>(ClientCommunication::RetrieveMessage(c_Database,
+                                                                                                 c_UserInfo)));
                     break;
                 }
                 case NetMessage::MSG_TEXT:
@@ -199,8 +213,16 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
         }
         catch (std::exception& e)
         {
-            Logger::Singleton().Log(Logger::ERROR, "Failed to process recieved net message: " +
-                                                   std::string(e.what()),
+            Logger::Singleton().Log(Logger::ERROR, "(Client ID: " +
+                                                   std::to_string(us_ClientID) +
+                                                   ", User ID " +
+                                                   std::to_string(c_UserInfo.u32_UserID) +
+                                                   ", Device Key: " +
+                                                   c_UserInfo.s_DeviceKey +
+                                                   ", Client Type: " +
+                                                   std::to_string(c_UserInfo.u8_ClientType) +
+                                                   "): Failed to process recieved net message: " +
+                                                   e.what(),
                                     "Client.cpp", __LINE__);
         }
     }
@@ -214,8 +236,16 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
     }
     catch (std::exception& e)
     {
-        Logger::Singleton().Log(Logger::ERROR, "Failed to send net messages: " +
-                                               std::string(e.what()),
+        Logger::Singleton().Log(Logger::ERROR, "(Client ID: " +
+                                               std::to_string(us_ClientID) +
+                                               ", User ID " +
+                                               std::to_string(c_UserInfo.u32_UserID) +
+                                               ", Device Key: " +
+                                               c_UserInfo.s_DeviceKey +
+                                               ", Client Type: " +
+                                               std::to_string(c_UserInfo.u8_ClientType) +
+                                               " ): Failed to send net messages: " +
+                                               e.what(),
                                 "Client.cpp", __LINE__);
         b_Result = false;
     }
@@ -233,10 +263,12 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
 // Recieve
 //*************************************************************************************
 
-void Client::Recieve(StreamData& c_Data) noexcept
+void Client::RecieveNetMessage(StreamData& c_Data) noexcept
 {
 #if CLIENT_EXTENDED_LOGGING > 0
-        Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
+        Logger::Singleton().Log(Logger::INFO, "(Client ID: " +
+                                              std::to_string(us_ClientID) +
+                                              ", User ID " +
                                               std::to_string(c_UserInfo.u32_UserID) +
                                               ", Device Key: " +
                                               c_UserInfo.s_DeviceKey +
@@ -258,8 +290,39 @@ void Client::Recieve(StreamData& c_Data) noexcept
     }
     catch (std::exception& e)
     {
-        Logger::Singleton().Log(Logger::ERROR, "Failed to add recieved net message: " +
-                                               std::string(e.what()),
+        Logger::Singleton().Log(Logger::ERROR, "(Client ID: " +
+                                               std::to_string(us_ClientID) +
+                                               ", User ID " +
+                                               std::to_string(c_UserInfo.u32_UserID) +
+                                               ", Device Key: " +
+                                               c_UserInfo.s_DeviceKey +
+                                               ", Client Type: " +
+                                               std::to_string(c_UserInfo.u8_ClientType) +
+                                               " ): Failed to add recieved net message: " +
+                                               e.what(),
+                                "Client.cpp", __LINE__);
+    }
+}
+
+void Client::RecieveDataAvailable() noexcept
+{
+    try
+    {
+        std::shared_ptr<NetMessage> p_Message = std::make_shared<NetMessage>(NetMessage::MSG_DATA_AVAILABLE);
+        c_Recieved.Add(p_Message);
+    }
+    catch (std::exception& e)
+    {
+        Logger::Singleton().Log(Logger::ERROR, "(Client ID: " +
+                                               std::to_string(us_ClientID) +
+                                               ", User ID " +
+                                               std::to_string(c_UserInfo.u32_UserID) +
+                                               ", Device Key: " +
+                                               c_UserInfo.s_DeviceKey +
+                                               ", Client Type: " +
+                                               std::to_string(c_UserInfo.u8_ClientType) +
+                                               " ): Failed to add recieved data available notification: " +
+                                               e.what(),
                                 "Client.cpp", __LINE__);
     }
 }
@@ -270,19 +333,30 @@ void Client::Recieve(StreamData& c_Data) noexcept
 
 void Client::Send()
 {
-    for (auto It = l_Send.begin(); It != l_Send.end(); ++It)
+    while (true)
     {
+        // Grab send message
+        std::shared_ptr<NetMessage> p_Send = c_Send.GetElement();
+        
+        if (p_Send == NULL)
+        {
+            // Nothing left to send for this update
+            return;
+        }
+        
 #if CLIENT_EXTENDED_LOGGING > 0
-        Logger::Singleton().Log(Logger::INFO, "Client (User ID " +
+        Logger::Singleton().Log(Logger::INFO, "(Client ID: " +
+                                              std::to_string(us_ClientID) +
+                                              ", Client (User ID " +
                                               std::to_string(c_UserInfo.u32_UserID) +
                                               ", Device Key: " +
                                               c_UserInfo.s_DeviceKey +
                                               ", Client Type: " +
                                               std::to_string(c_UserInfo.u8_ClientType) +
                                               "): Sending NetMessage " +
-                                              std::to_string(It->GetID()) +
+                                              std::to_string(p_Send->GetID()) +
                                               " (Size: " +
-                                              std::to_string(It->v_Data.size()) +
+                                              std::to_string(p_Send->v_Data.size()) +
                                               ").",
                                 "Client.cpp", __LINE__);
 #endif
@@ -309,7 +383,7 @@ void Client::Send()
         }
         
         // Add the send data
-        p_Context->c_Data.v_Bytes.swap(It->v_Data);
+        p_Context->c_Data.v_Bytes.swap(p_Send->v_Data);
         
         // Now we perform the quic buffer setup
         p_Context->c_Data.v_Bytes.insert(p_Context->c_Data.v_Bytes.begin(),
@@ -331,6 +405,7 @@ void Client::Send()
                                                p_Context,
                                                &p_Stream)))
         {
+            c_Send.Add(p_Send); // Return to send
             p_Context->c_Data.e_State = StreamData::FREE;
             
             throw Exception("Failed to open stream!");
@@ -338,6 +413,7 @@ void Client::Send()
         else if (QUIC_FAILED(p_APITable->StreamStart(p_Stream,
                                                      QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL)))
         {
+            c_Send.Add(p_Send);
             p_APITable->StreamClose(p_Stream);
             p_Context->c_Data.e_State = StreamData::FREE;
             
@@ -349,13 +425,20 @@ void Client::Send()
                                                     QUIC_SEND_FLAG_FIN,
                                                     NULL)))
         {
+            c_Send.Add(p_Send);
             p_APITable->StreamClose(p_Stream);
             p_Context->c_Data.e_State = StreamData::FREE;
             
             throw Exception("Failed to send on stream!");
         }
-        
-        // Now sending, remove net message
-        It = l_Send.erase(It);
     }
+}
+
+//*************************************************************************************
+// Getters
+//*************************************************************************************
+
+size_t Client::GetClientID() const noexcept
+{
+    return us_ClientID;
 }

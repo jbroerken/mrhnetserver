@@ -28,7 +28,7 @@
 #include <msquic.h>
 
 // Project
-#include "../../Job/JobList.h"
+#include "../ClientPool.h"
 #include "./ClientConnections.h"
 
 
@@ -45,16 +45,16 @@ public:
      *
      *  \param p_APITable The library api table.
      *  \param p_Configuration The library configuration.
-     *  \param c_JobList The job list to hand to connections.
+     *  \param c_ClientPool The client pool to hand to connections.
      *  \param i_ClientConnectionsMax The max number of clients which can connect.
      */
     
     ListenerContext(const QUIC_API_TABLE* p_APITable,
                     HQUIC p_Configuration,
-                    JobList& c_JobList,
+                    ClientPool& c_ClientPool,
                     int i_ClientConnectionsMax) noexcept : p_APITable(p_APITable),
                                                            p_Configuration(p_Configuration),
-                                                           c_JobList(c_JobList),
+                                                           c_ClientPool(c_ClientPool),
                                                            c_Connections(i_ClientConnectionsMax)
     {}
     
@@ -65,7 +65,7 @@ public:
     const QUIC_API_TABLE* p_APITable;
     HQUIC p_Configuration;
     
-    JobList& c_JobList;
+    ClientPool& c_ClientPool;
     ClientConnections c_Connections;
 };
 

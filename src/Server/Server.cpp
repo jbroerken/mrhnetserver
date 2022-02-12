@@ -43,8 +43,8 @@
 // Constructor / Destructor
 //*************************************************************************************
 
-Server::Server(JobList& c_JobList) : c_JobList(c_JobList),
-                                     b_Started(false)
+Server::Server(ClientPool& c_ClientPool) : c_ClientPool(c_ClientPool),
+                                           b_Started(false)
 {
     QUIC_STATUS ui_Status;
     HQUIC p_Registration;
@@ -191,7 +191,7 @@ void Server::Start(int i_Port, std::string const& s_CertFilePath, std::string co
     {
         p_Context = new ListenerContext(p_APITable,
                                         p_Configuration,
-                                        c_JobList,
+                                        c_ClientPool,
                                         i_MaxClientCount);
     }
     catch (...)

@@ -58,7 +58,7 @@ QUIC_STATUS QUIC_API ListenerCallback(_In_ HQUIC Listener, _In_opt_ void* Contex
                 // First, create the connection context to use
                 ConnectionContext* p_Connection = new ConnectionContext(p_Listener->p_APITable,
                                                                         Event->NEW_CONNECTION.Connection,
-                                                                        p_Listener->c_JobList,
+                                                                        p_Listener->c_ClientPool,
                                                                         p_Listener->c_Connections);
                 
                 // Next, perform API setup
@@ -121,12 +121,12 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
             // Remove connection as active
             p_Context->c_Connections.i_ClientConnections -= 1;
             
-            // Remove context
+            // Remove client and context
             if (p_Context != NULL)
             {
                 p_Context->p_APITable->ConnectionClose(p_Context->p_Connection);
-                p_Context->p_Client->Disconnected();
-                
+                p_Context->c_ClientPool.RemoveClient(p_Context->us_ClientID);
+
                 delete p_Context;
             }
             break;
@@ -159,8 +159,8 @@ QUIC_STATUS QUIC_API ConnectionCallback(_In_ HQUIC Connection, _In_opt_ void* Co
             {
                 p_Context->l_Recieved.emplace_back(p_Context->p_APITable,
                                                    Connection,
-                                                   p_Context->p_Client,
-                                                   p_Context->c_JobList);
+                                                   p_Context->c_ClientPool,
+                                                   p_Context->us_ClientID);
                 
                 p_Stream = &(*(--(p_Context->l_Recieved.end())));
                 p_Stream->c_Data.e_State = StreamData::IN_USE;
@@ -224,11 +224,8 @@ QUIC_STATUS QUIC_API StreamRecieveCallback(_In_ HQUIC Stream, _In_opt_ void* Con
                                                   0);
             
             // Add message to client
-            p_Context->p_Client->Recieve(p_Context->c_Data);
+            p_Context->c_ClientPool.DataRecieved(p_Context->us_ClientID, p_Context->c_Data);
             p_Context->c_Data.e_State = StreamData::FREE;
-            
-            // Now update client
-            p_Context->c_JobList.AddJob(p_Context->p_Client);
             break;
         }
             

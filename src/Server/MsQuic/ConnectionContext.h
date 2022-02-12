@@ -47,20 +47,27 @@ public:
      *
      *  \param p_APITable The library api table.
      *  \param p_Connection The connection handle to manage.
-     *  \param c_JobList The job list to hand to the connection.
+     *  \param c_ClientPool The client pool to store the client in.
      *  \param c_Connections The client connections information.
      */
     
     ConnectionContext(const QUIC_API_TABLE* p_APITable,
                       HQUIC p_Connection,
-                      JobList& c_JobList,
+                      ClientPool& c_ClientPool,
                       ClientConnections& c_Connections) : p_APITable(p_APITable),
                                                           p_Connection(p_Connection),
-                                                          c_Connections(c_Connections),
-                                                          c_JobList(c_JobList)
+                                                          c_ClientPool(c_ClientPool),
+                                                          c_Connections(c_Connections)
     {
-        p_Client = std::make_shared<Client>(p_APITable,
-                                            p_Connection);
+        try
+        {
+            us_ClientID = c_ClientPool.AddClient(p_APITable,
+                                                 p_Connection);
+        }
+        catch (...)
+        {
+            throw;
+        }
     }
     
     //*************************************************************************************
@@ -70,10 +77,10 @@ public:
     const QUIC_API_TABLE* p_APITable;
     HQUIC p_Connection;
     
+    ClientPool& c_ClientPool;
     ClientConnections& c_Connections;
-    std::shared_ptr<Client> p_Client;
-    JobList& c_JobList;
     
+    size_t us_ClientID;
     std::list<StreamRecieveContext> l_Recieved;
 };
 

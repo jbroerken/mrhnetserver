@@ -43,15 +43,15 @@ NetMessage ClientCommunication::RetrieveMessage( Database& c_Database, UserInfo 
     Logger& c_Logger = Logger::Singleton();
     
     // Get the sender based on the reciever
-    uint8_t u8_ActorType;
+    uint8_t u8_SenderType;
     
     switch (c_UserInfo.u8_ClientType)
     {
         case CLIENT_APP:
-            u8_ActorType = CLIENT_PLATFORM;
+            u8_SenderType = CLIENT_PLATFORM;
             break;
         case CLIENT_PLATFORM:
-            u8_ActorType = CLIENT_APP;
+            u8_SenderType = CLIENT_APP;
             break;
             
         default:
@@ -87,7 +87,7 @@ NetMessage ClientCommunication::RetrieveMessage( Database& c_Database, UserInfo 
                                 .bind("valueB",
                                       c_UserInfo.s_DeviceKey)
                                 .bind("valueC",
-                                      u8_ActorType)
+                                      u8_SenderType)
                                 .execute();
         
         if (c_Result.count() > 0)
@@ -97,20 +97,19 @@ NetMessage ClientCommunication::RetrieveMessage( Database& c_Database, UserInfo 
             
             std::string s_Bin = Base64::ToBytes(c_Row[5].get<std::string>());
             
-            if (s_Bin.size() > 0)
-            {
-                NetMessage c_NetMessage(c_Row[4].get<uint32_t>());
-                std::move(s_Bin.begin(),
-                          s_Bin.end(),
-                          std::back_inserter(c_NetMessage.v_Data));
-                
-                return c_NetMessage;
-            }
-            else
+            if (s_Bin.size() == 0)
             {
                 c_Logger.Log(Logger::WARNING, "Failed to decode message base64!",
                              "ClientCommunication.cpp", __LINE__);
+                
+                return NetMessage(NetMessage::MSG_NO_DATA);
             }
+            
+            // Create
+            NetMessage c_NetMessage(c_Row[4].get<uint32_t>());
+            std::move(s_Bin.begin(),
+                      s_Bin.end(),
+                      std::back_inserter(c_NetMessage.v_Data));
             
             // Remove message
             c_Table.remove()
@@ -119,6 +118,13 @@ NetMessage ClientCommunication::RetrieveMessage( Database& c_Database, UserInfo 
                 .bind("value",
                       c_Row[0].get<uint64_t>())
                 .execute();
+            
+            // Now send
+            return c_NetMessage;
+        }
+        else
+        {
+            return NetMessage(NetMessage::MSG_NO_DATA);
         }
     }
     catch (std::exception& e)
@@ -126,10 +132,9 @@ NetMessage ClientCommunication::RetrieveMessage( Database& c_Database, UserInfo 
         Logger::Singleton().Log(Logger::ERROR, "Message retrieval from database failed: " +
                                                std::string(e.what()),
                                 "ClientCommunication.cpp", __LINE__);
+        
+        return NetMessage(NetMessage::MSG_NO_DATA);
     }
-    
-    // Got nothing?
-    return NetMessage(NetMessage::MSG_NO_DATA);
 }
 
 //*************************************************************************************

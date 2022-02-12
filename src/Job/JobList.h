@@ -105,7 +105,7 @@ private:
     std::condition_variable c_Condition;
     std::mutex c_Mutex;
     
-    SharedList<Job> c_Job;
+    SharedList<Job> c_JobList;
     std::atomic<bool> b_Locked;
     
 protected:

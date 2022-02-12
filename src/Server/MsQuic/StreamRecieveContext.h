@@ -33,7 +33,7 @@
 // Project
 #include "./StreamData.h"
 #include "../../Job/JobList.h"
-#include "../Client.h"
+#include "../ClientPool.h"
 
 
 struct StreamRecieveContext
@@ -49,17 +49,17 @@ public:
      *
      *  \param p_APITable The library api table.
      *  \param p_Connection The connection for this stream.
-     *  \param p_Client The client to recieve and send messages.
-     *  \param c_JobList The job list to hand to the connection.
+     *  \param c_ClientPool The client pool containing all clients.
+     *  \param us_ClientID The id of the client which recieves.
      */
     
     StreamRecieveContext(const QUIC_API_TABLE* p_APITable,
                          HQUIC p_Connection,
-                         std::shared_ptr<Client>& p_Client,
-                         JobList& c_JobList) noexcept : p_APITable(p_APITable),
+                         ClientPool& c_ClientPool,
+                         size_t us_ClientID) noexcept : p_APITable(p_APITable),
                                                         p_Connection(p_Connection),
-                                                        p_Client(p_Client),
-                                                        c_JobList(c_JobList)
+                                                        c_ClientPool(c_ClientPool),
+                                                        us_ClientID(us_ClientID)
     {}
     
     //*************************************************************************************
@@ -69,8 +69,8 @@ public:
     const QUIC_API_TABLE* p_APITable;
     HQUIC p_Connection;
     
-    std::shared_ptr<Client> p_Client;
-    JobList& c_JobList;
+    ClientPool& c_ClientPool;
+    size_t us_ClientID;
     
     StreamData c_Data;
 };

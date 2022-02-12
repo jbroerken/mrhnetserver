@@ -38,8 +38,6 @@
 #include "./Revision.h"
 
 // Pre-defined
-#define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/Users/Jens/Desktop/mrhnetserver.conf"
-
 #ifndef MRH_SRV_DEFAULT_CONFIG_FILE_PATH
     #define MRH_SRV_DEFAULT_CONFIG_FILE_PATH "/usr/local/etc/mrhnetserver.conf"
 #endif
@@ -288,8 +286,11 @@ int main(int argc, const char* argv[])
          *  Server
          */
         
-        // Create net server first and start
-        Server c_Server(c_JobList);
+        // We need a client pool for the server
+        ClientPool c_ClientPool(c_JobList);
+        
+        // Create net server and start
+        Server c_Server(c_ClientPool);
         
         c_Server.Start(c_Config.i_Port,
                        c_Config.s_CertFilePath,
@@ -347,12 +348,16 @@ int main(int argc, const char* argv[])
         {
             try
             {
+                // Get job
                 std::shared_ptr<Job> p_Job = c_JobList.GetJob();
                 
                 if (p_Job->Perform(p_Database) == false)
                 {
                     c_JobList.AddJob(p_Job);
                 }
+                
+                // Reset job to no longer be owner
+                p_Job.reset();
             }
             catch (...)
             {}

@@ -51,10 +51,12 @@ public:
      *
      *  \param p_APITable The api table to use for sending.
      *  \param p_Connection The connection for the client.
+     *  \param us_ClientID The id for the client.
      */
     
     Client(const QUIC_API_TABLE* p_APITable,
-           HQUIC p_Connection) noexcept;
+           HQUIC p_Connection,
+           size_t us_ClientID) noexcept;
     
     /**
      *  Copy constructor. Disabled for this class.
@@ -104,37 +106,27 @@ public:
      *  \param c_Data The recieved stream data.
      */
     
-    void Recieve(StreamData& c_Data) noexcept;
+    void RecieveNetMessage(StreamData& c_Data) noexcept;
+    
+    /**
+     *  Recieve a data available notification.
+     */
+    
+    void RecieveDataAvailable() noexcept;
+    
+    //*************************************************************************************
+    // Getters
+    //*************************************************************************************
+    
+    /**
+     *  Get the id for the client.
+     *
+     *  \return The client id.
+     */
+    
+    size_t GetClientID() const noexcept;
     
 private:
-    
-    //*************************************************************************************
-    // Types
-    //*************************************************************************************
-    
-    struct Recieved
-    {
-    public:
-        
-        //*************************************************************************************
-        // Constructor
-        //*************************************************************************************
-        
-        /**
-         *  Default destructor.
-         *
-         *  \param c_Data The net message data to add.
-         */
-    
-        Recieved(StreamData& c_Data);
-        
-        //*************************************************************************************
-        // Disconnect
-        //*************************************************************************************
-        
-        std::mutex c_Mutex;
-        NetMessage c_Message;
-    };
     
     //*************************************************************************************
     // Disconnect
@@ -160,12 +152,13 @@ private:
     // Data
     //*************************************************************************************
     
-    // Perform
+    // State
+    size_t us_ClientID;
     std::mutex c_PerformMutex; // Stop multiple job threads
     
     // Net Message
     SharedList<NetMessage> c_Recieved;
-    std::list<NetMessage> l_Send;
+    SharedList<NetMessage> c_Send;
     
     // MsQuic
     const QUIC_API_TABLE* p_APITable;

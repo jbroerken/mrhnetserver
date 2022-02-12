@@ -79,12 +79,16 @@ void ThreadPool::Update(ThreadPool* p_Instance, ThreadShared* p_ThreadShared) no
     {
         try
         {
+            // Get next job
             std::shared_ptr<Job> p_Job = p_Instance->c_JobList.GetJob();
             
             if (p_Job->Perform(p_Shared) == false)
             {
                 p_Instance->c_JobList.AddJob(p_Job);
             }
+            
+            // Reset job to no longer be owner
+            p_Job.reset();
         }
         catch (...)
         {}
