@@ -31,24 +31,13 @@
 // Constructor / Destructor
 //*************************************************************************************
 
-JobList::JobList() noexcept : us_EntryCount(0),
-                              us_JobCount(0),
-                              b_Locked(false)
+JobList::JobList() noexcept : b_Locked(false)
 {}
 
 JobList::~JobList() noexcept
 {
     Lock();
 }
-
-JobList::Entry::Entry() noexcept : p_Job(NULL)
-{}
-
-JobList::Entry::Entry(std::shared_ptr<Job>& p_Job) noexcept : p_Job(p_Job)
-{}
-
-JobList::Entry::~Entry() noexcept
-{}
 
 //*************************************************************************************
 // Lock
@@ -71,57 +60,13 @@ void JobList::Unlock() noexcept
 
 void JobList::AddJob(std::shared_ptr<Job> p_Job)
 {
-    if (p_Job == NULL || p_Job == nullptr)
-    {
-        throw Exception("Invalid job added!");
-    }
-    
-    // First try to reuse a entry
-    // @NOTE: Task deque never shrinks!
-    for (size_t i = 0; i < us_EntryCount; ++i)
-    {
-        // Task free to be checked?
-        // @NOTE: Locking does not need a retry, a task locked
-        //        which is removed by the worker thread is simply
-        //        bad timing. But at this point it's still a valid
-        //        usable task
-        if (dq_Job[i].c_Mutex.try_lock() == false)
-        {
-            continue;
-        }
-        
-        // Task can be added here?
-        if (dq_Job[i].p_Job == NULL)
-        {
-            dq_Job[i].p_Job.swap(p_Job);
-            us_JobCount += 1;
-            
-            dq_Job[i].c_Mutex.unlock();
-            c_Condition.notify_one();
-            
-            return;
-        }
-        else
-        {
-            dq_Job[i].c_Mutex.unlock();
-        }
-    }
-    
-    // No free entry, add a new one
     try
     {
-        c_Mutex.lock(); // Lock for outside multithreading
-        
-        dq_Job.emplace_back(p_Job);
-        us_EntryCount += 1;
-        us_JobCount += 1;
-        
-        c_Mutex.unlock();
-        c_Condition.notify_one();
+        c_Job.Add(p_Job);
     }
-    catch (std::exception& e)
+    catch (...)
     {
-        throw Exception("Failed to add job: " + std::string(e.what()));
+        throw;
     }
 }
 
@@ -135,36 +80,11 @@ std::shared_ptr<Job> JobList::GetJob()
     
     while (b_Locked == false)
     {
-        // Run connections
-        // @NOTE: Job deque never shrinks!
-        for (size_t i = 0; i < us_EntryCount; ++i)
-        {
-            // Can we grab this job?
-            if (dq_Job[i].c_Mutex.try_lock() == false)
-            {
-                continue;
-            }
-            else if (dq_Job[i].p_Job == NULL)
-            {
-                dq_Job[i].c_Mutex.unlock();
-                continue;
-            }
-            
-            // Grab the job
-            p_Result.swap(dq_Job[i].p_Job);
-            us_JobCount -= 1;
-            
-            // Unlock and return
-            dq_Job[i].c_Mutex.unlock();
-            return p_Result;
-        }
+        // Get a job
+        std::shared_ptr<Job> p_Job = c_Job.GetElement(true);
         
         // No job available, wait for one
-        // @NOTE: We need this check for the case where all
-        //        threads are running and at a iterator value
-        //        higher than the entry where a new job was
-        //        added
-        if (us_JobCount == 0)
+        if (p_Job == NULL)
         {
             std::unique_lock<std::mutex> c_Lock(c_Mutex);
             c_Condition.wait(c_Lock);

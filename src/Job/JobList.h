@@ -33,7 +33,7 @@
 
 // Project
 #include "./Job.h"
-#include "../Exception.h"
+#include "../SharedList.h"
 
 
 class JobList
@@ -99,64 +99,13 @@ public:
 private:
     
     //*************************************************************************************
-    // Types
-    //*************************************************************************************
-    
-    struct Entry
-    {
-    public:
-        
-        //*************************************************************************************
-        // Constructor / Destructor
-        //*************************************************************************************
-        
-        /**
-         *  Default constructor.
-         */
-            
-        Entry() noexcept;
-        
-        /**
-         *  Job constructor.
-         *
-         *  \param p_Job The job to add.
-         */
-            
-        Entry(std::shared_ptr<Job>& p_Job) noexcept;
-        
-        /**
-         *  Copy constructor. Disabled for this class.
-         *
-         *  \param c_Entry Entry class source.
-         */
-        
-        Entry(Entry const& c_Entry) = delete;
-        
-        /**
-         *  Default destructor.
-         */
-        
-        ~Entry() noexcept;
-        
-        //*************************************************************************************
-        // Data
-        //*************************************************************************************
-        
-        std::mutex c_Mutex;
-        std::shared_ptr<Job> p_Job;
-    };
-    
-    //*************************************************************************************
     // Data
     //*************************************************************************************
     
     std::condition_variable c_Condition;
     std::mutex c_Mutex;
     
-    std::deque<Entry> dq_Job;
-    std::atomic<size_t> us_EntryCount; // Job list count
-    std::atomic<size_t> us_JobCount; // Available valid jobs
-    
+    SharedList<Job> c_Job;
     std::atomic<bool> b_Locked;
     
 protected:

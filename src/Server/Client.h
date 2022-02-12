@@ -29,13 +29,13 @@
 #include <utility>
 
 // External
-#include <msquic.h>
 
 // Project
 #include "./MsQuic/StreamSendContext.h"
 #include "./Client/UserInfo.h"
 #include "../NetMessage/NetMessage.h"
 #include "../Job/Job.h"
+#include "../SharedList.h"
 
 
 class Client : public Job
@@ -164,9 +164,7 @@ private:
     std::mutex c_PerformMutex; // Stop multiple job threads
     
     // Net Message
-    std::deque<Recieved> dq_Recieved;
-    std::atomic<size_t> us_RecievedCount; // Recieved is modified by multiple threads
-    std::mutex c_RecievedMutex; // Lock on list modification
+    SharedList<NetMessage> c_Recieved;
     std::list<NetMessage> l_Send;
     
     // MsQuic

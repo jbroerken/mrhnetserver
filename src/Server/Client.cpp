@@ -45,8 +45,7 @@ using namespace ClientCommunication;
 
 Client::Client(const QUIC_API_TABLE* p_APITable,
                HQUIC p_Connection) noexcept : p_APITable(p_APITable),
-                                              p_Connection(p_Connection),
-                                              us_RecievedCount(0)
+                                              p_Connection(p_Connection)
 {}
 
 Client::~Client() noexcept
@@ -82,17 +81,6 @@ void Client::Disconnect() noexcept
         return;
     }
     
-    /*
-    // Are we still required to send something?
-    for (auto It = l_StreamData.begin(); It != l_StreamData.end(); ++It)
-    {
-        if (It->e_State == StreamData::IN_USE)
-        {
-            return;
-        }
-    }
-    */
-    
     p_APITable->ConnectionShutdown(p_Connection,
                                    QUIC_CONNECTION_SHUTDOWN_FLAG_NONE,
                                    0);
@@ -121,26 +109,13 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
     }
     
     // Grab and process recieved messages
-    for (size_t i = 0; i < us_RecievedCount; ++i)
+    std::shared_ptr<NetMessage> p_Recieved;
+    
+    while ((p_Recieved = c_Recieved.GetElement(true)) != NULL)
     {
-        // Can we work on this message?
-        if (dq_Recieved[i].c_Mutex.try_lock() == false)
-        {
-            // Data is currently added by recieve()
-            continue;
-        }
-        else if (dq_Recieved[i].c_Message.v_Data.size() == 0)
-        {
-            // This message is empty
-            dq_Recieved[i].c_Mutex.unlock();
-            continue;
-        }
-        
-        // This message is usable, work on it
-        auto& Recieved = dq_Recieved[i].c_Message;
-        
         try
         {
+            auto& Recieved = *p_Recieved;
             Database& c_Database = dynamic_cast<Database&>(*(p_Shared.get()));
             
             switch (Recieved.GetID())
@@ -228,10 +203,6 @@ bool Client::Perform(std::shared_ptr<ThreadShared>& p_Shared) noexcept
                                                    std::string(e.what()),
                                     "Client.cpp", __LINE__);
         }
-        
-        // Recieved message processed, set free
-        dq_Recieved[i].c_Message.v_Data.clear();
-        dq_Recieved[i].c_Mutex.unlock();
     }
     
     // Processed recieved messages, now send
@@ -279,40 +250,11 @@ void Client::Recieve(StreamData& c_Data) noexcept
                                 "Client.cpp", __LINE__);
 #endif
     
-    // Try to replace a unused message
-    for (size_t i = 0; i < us_RecievedCount; ++i)
-    {
-        // Can we work on this message?
-        auto& Entry = dq_Recieved[i];
-        
-        if (Entry.c_Mutex.try_lock() == false)
-        {
-            // Message is currently processed by perform()
-            continue;
-        }
-        else if (Entry.c_Message.v_Data.size() != 0)
-        {
-            // Message is not empty
-            Entry.c_Mutex.unlock();
-            continue;
-        }
-        
-        // Message is replaceable
-        // @NOTE: Swap is ok, bytes of stream data are recreated!
-        Entry.c_Message.v_Data.swap(c_Data.v_Bytes);
-        Entry.c_Mutex.unlock();
-        
-        return;
-    }
-    
     // No free space, add new
     try
     {
-        c_RecievedMutex.lock();
-        dq_Recieved.emplace_back(c_Data);
-        c_RecievedMutex.unlock();
-        
-        us_RecievedCount += 1;
+        std::shared_ptr<NetMessage> p_Message = std::make_shared<NetMessage>(c_Data.v_Bytes);
+        c_Recieved.Add(p_Message);
     }
     catch (std::exception& e)
     {
