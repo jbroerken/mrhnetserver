@@ -3,3 +3,14 @@
 #  mrhnetserver ToDo
 #
 ###
+
+Swap Database:
+--------------
+- Swap MySQL database with something which can react to database changes.
+- Use NoSQL database, every message is a document stored in a collection
+  with a user -> device key -> client type -> message structure.
+
+Server Sent Messages:
+---------------------
+- Send DATA_AVAILABLE net message to client if new messages are available 
+  to no longer rely on constant GET_DATA messages.
