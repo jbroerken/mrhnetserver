@@ -46,7 +46,7 @@ https://sphinx-rtd-theme.readthedocs.io/en/stable/
 
 ## Licence
 
-This project is licenced under the GNU General Public 2 licence. 
+This project is licenced under the Apache 2.0 licence. 
 Please read the included LICENCE.txt for the exact terms.
 
 
